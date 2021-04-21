@@ -1,0 +1,6 @@
+5 5
+O O O O G
+W W O W O
+O W O W O
+O W O W W
+S O O O O
