@@ -43,8 +43,8 @@ Press Esc to exit the game.\n";
 #include <algorithm>
 using namespace std;
 
-int screenWidth = 800; 
-int screenHeight = 600;  
+int screenWidth = 800;
+int screenHeight = 600;
 float timePast = 0;
 float dt = 0;
 bool goal_found = false;
@@ -64,7 +64,7 @@ glm::vec3 colorE(0.1f, 0.1f, 0.0f);
 
 // set up camera attributes
 glm::vec3 cam_pos = glm::vec3(0.0f, 0.0f, 0.0f);  // Cam Position
-glm::vec3 cam_dir = glm::vec3(-1.0f, 0.0f,-1.0f);  // Look at point
+glm::vec3 cam_dir = glm::vec3(-1.0f, 0.0f, -1.0f);  // Look at point
 glm::vec3 cam_up = glm::vec3(0.0f, 1.0f, 0.0f);  // Up
 float cam_angle = glm::atan(cam_dir.z, cam_dir.x);
 float cam_speed = 2.0f;
@@ -79,7 +79,7 @@ bool DEBUG_ON = true;
 GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName);
 bool fullscreen = false;
 
-struct MapFile{
+struct MapFile {
 	int width = 0;
 	int height = 0;
 	char* data = NULL;
@@ -89,7 +89,7 @@ map <char, bool> doorOpen = { {'A',false}, {'B',false}, {'C',false}, {'D',false}
 map <char, char> doorToKey = { {'A','a'}, {'B','b'}, {'C','c'}, {'D','d'}, {'E','e'} };
 
 bool isDoor(char type) {
-	if (type=='A' || type == 'B' || type == 'C' || type == 'D' || type == 'E')
+	if (type == 'A' || type == 'B' || type == 'C' || type == 'D' || type == 'E')
 		return true;
 	else
 		return false;
@@ -110,7 +110,7 @@ char activeKey = '0';
 
 
 void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int model2_start, int model2_numVerts,
-					int model3_start, int model3_numVerts, int model4_start, int model4_numVerts, MapFile map_data);
+	int model3_start, int model3_numVerts, int model4_start, int model4_numVerts, MapFile map_data);
 
 static char* readShaderSource(const char* shaderFile);
 
@@ -124,7 +124,7 @@ bool isWalkableAndEvents(float newX, float newZ, MapFile map_data);
 
 void wallSlide(float newX, float newZ, MapFile map_data);
 
-int main(int argc, char *argv[]){
+int main(int argc, char* argv[]) {
 	SDL_Init(SDL_INIT_VIDEO);  //Initialize Graphics (for OpenGL)
 
 	//Ask SDL to get a recent version of OpenGL (3.2 or greater)
@@ -137,9 +137,12 @@ int main(int argc, char *argv[]){
 
 	//Create a context to draw in
 	SDL_GLContext context = SDL_GL_CreateContext(window);
-	
+
+	//Mouse motion
+	SDL_SetRelativeMouseMode(SDL_TRUE);
+
 	//Load OpenGL extentions with GLAD
-	if (gladLoadGLLoader(SDL_GL_GetProcAddress)){
+	if (gladLoadGLLoader(SDL_GL_GetProcAddress)) {
 		printf("\nOpenGL loaded\n");
 		printf("Vendor:   %s\n", glGetString(GL_VENDOR));
 		printf("Renderer: %s\n", glGetString(GL_RENDERER));
@@ -149,9 +152,9 @@ int main(int argc, char *argv[]){
 		printf("ERROR: Failed to initialize OpenGL context.\n");
 		return -1;
 	}
-	
+
 	//Here we will load three different model files 
-	
+
 	//Load Model 1 - cube
 	ifstream modelFile;
 	modelFile.open("models/cube.txt");
@@ -162,23 +165,23 @@ int main(int argc, char *argv[]){
 	int numLines = 0;
 	modelFile >> numLines;
 	float* model1 = new float[numLines];
-	for (int i = 0; i < numLines; i++){
+	for (int i = 0; i < numLines; i++) {
 		modelFile >> model1[i];
 	}
-	printf("%d\n",numLines);
-	int numVertsCube = numLines/8;
+	printf("%d\n", numLines);
+	int numVertsCube = numLines / 8;
 	modelFile.close();
-	
+
 	//Load Model 2 - teapot
 	modelFile.open("models/teapot.txt");
 	numLines = 0;
 	modelFile >> numLines;
 	float* model2 = new float[numLines];
-	for (int i = 0; i < numLines; i++){
+	for (int i = 0; i < numLines; i++) {
 		modelFile >> model2[i];
 	}
-	printf("%d\n",numLines);
-	int numVertsTeapot = numLines/8;
+	printf("%d\n", numLines);
+	int numVertsTeapot = numLines / 8;
 	modelFile.close();
 
 	//Load Model 3 - floor
@@ -198,72 +201,72 @@ int main(int argc, char *argv[]){
 	float* model4 = loadModelOBJ("models/key.obj", numLines);
 	int numVertsKey = numLines / 8;
 	printf("%d, %d\n", numLines, numVertsKey);
-	
+
 	//SJG: I load each model in a different array, then concatenate everything in one big array
 	// This structure works, but there is room for improvement here. Eg., you should store the start
 	// and end of each model a data structure or array somewhere.
 	//Concatenate model arrays
-	float* modelData = new float[(numVertsCube + numVertsTeapot + numVertsFloor + numVertsKey)*8];
-	copy(model1, model1+numVertsCube*8,   modelData);
-	copy(model2, model2+numVertsTeapot*8, modelData+numVertsCube*8);
-	copy(model3, model3+numVertsFloor*8,  modelData+numVertsCube*8+numVertsTeapot*8);
-	copy(model4, model4+numVertsKey*8,    modelData+numVertsCube*8+numVertsTeapot*8+numVertsFloor*8);
+	float* modelData = new float[(numVertsCube + numVertsTeapot + numVertsFloor + numVertsKey) * 8];
+	copy(model1, model1 + numVertsCube * 8, modelData);
+	copy(model2, model2 + numVertsTeapot * 8, modelData + numVertsCube * 8);
+	copy(model3, model3 + numVertsFloor * 8, modelData + numVertsCube * 8 + numVertsTeapot * 8);
+	copy(model4, model4 + numVertsKey * 8, modelData + numVertsCube * 8 + numVertsTeapot * 8 + numVertsFloor * 8);
 	int totalNumVerts = numVertsCube + numVertsTeapot + numVertsFloor + numVertsKey;
 	int startVertCube = 0;  //The cube is the first model in the VBO
 	int startVertTeapot = numVertsCube; //The teapot starts right after the cube
-	int startVertFloor =  numVertsCube + numVertsTeapot; //The floor starts right after the teapot
-	int startVertKey =    numVertsCube + numVertsTeapot + numVertsFloor; //The floor starts right after the floor
-	
+	int startVertFloor = numVertsCube + numVertsTeapot; //The floor starts right after the teapot
+	int startVertKey = numVertsCube + numVertsTeapot + numVertsFloor; //The floor starts right after the floor
+
 	//// Allocate Texture 0 (Wood) ///////
 	SDL_Surface* surface = SDL_LoadBMP("wood.bmp");
-	if (surface==NULL){ //If it failed, print the error
-        printf("Error: \"%s\"\n",SDL_GetError()); return 1;
-    }
-    GLuint tex0;
-    glGenTextures(1, &tex0);
-    
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tex0);
-    
-    //What to do outside 0-1 range
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    //Load the texture into memory
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w,surface->h, 0, GL_BGR,GL_UNSIGNED_BYTE,surface->pixels);
-    glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
-    
-    SDL_FreeSurface(surface);
-    //// End Allocate Texture ///////
+	if (surface == NULL) { //If it failed, print the error
+		printf("Error: \"%s\"\n", SDL_GetError()); return 1;
+	}
+	GLuint tex0;
+	glGenTextures(1, &tex0);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, tex0);
+
+	//What to do outside 0-1 range
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	//Load the texture into memory
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_BGR, GL_UNSIGNED_BYTE, surface->pixels);
+	glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
+
+	SDL_FreeSurface(surface);
+	//// End Allocate Texture ///////
 
 
 	//// Allocate Texture 1 (Brick) ///////
 	SDL_Surface* surface1 = SDL_LoadBMP("brick.bmp");
-	if (surface==NULL){ //If it failed, print the error
-        printf("Error: \"%s\"\n",SDL_GetError()); return 1;
-    }
-    GLuint tex1;
-    glGenTextures(1, &tex1);
-    
-    //Load the texture into memory
-    glActiveTexture(GL_TEXTURE1);
-    
-    glBindTexture(GL_TEXTURE_2D, tex1);
-    //What to do outside 0-1 range
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    //How to filter
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface1->w,surface1->h, 0, GL_BGR,GL_UNSIGNED_BYTE,surface1->pixels);
-    glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
-    
-    SDL_FreeSurface(surface1);
+	if (surface == NULL) { //If it failed, print the error
+		printf("Error: \"%s\"\n", SDL_GetError()); return 1;
+	}
+	GLuint tex1;
+	glGenTextures(1, &tex1);
+
+	//Load the texture into memory
+	glActiveTexture(GL_TEXTURE1);
+
+	glBindTexture(GL_TEXTURE_2D, tex1);
+	//What to do outside 0-1 range
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//How to filter
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface1->w, surface1->h, 0, GL_BGR, GL_UNSIGNED_BYTE, surface1->pixels);
+	glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
+
+	SDL_FreeSurface(surface1);
 	//// End Allocate Texture ///////
-	
+
 	//Build a Vertex Array Object (VAO) to store mapping of shader attributse to VBO
 	GLuint vao;
 	glGenVertexArrays(1, &vao); //Create a VAO
@@ -273,38 +276,38 @@ int main(int argc, char *argv[]){
 	GLuint vbo[1];
 	glGenBuffers(1, vbo);  //Create 1 buffer called vbo
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); //Set the vbo as the active array buffer (Only one buffer can be active at a time
-	glBufferData(GL_ARRAY_BUFFER, static_cast<unsigned long long>(totalNumVerts)*8*sizeof(float), modelData, GL_STATIC_DRAW); //upload vertices to vbo
+	glBufferData(GL_ARRAY_BUFFER, static_cast<unsigned long long>(totalNumVerts) * 8 * sizeof(float), modelData, GL_STATIC_DRAW); //upload vertices to vbo
 	//GL_STATIC_DRAW means we won't change the geometry, GL_DYNAMIC_DRAW = geometry changes infrequently
 	//GL_STREAM_DRAW = geom. changes frequently.  This effects which types of GPU memory is used
-	
-	int texturedShader = InitShader("textured-Vertex.glsl", "textured-Fragment.glsl");	
-	
+
+	int texturedShader = InitShader("textured-Vertex.glsl", "textured-Fragment.glsl");
+
 	//Tell OpenGL how to set fragment shader input 
 	GLint posAttrib = glGetAttribLocation(texturedShader, "position");
-	glVertexAttribPointer(posAttrib,  3, GL_FLOAT, GL_FALSE, 8*sizeof(float), 0);
-	  //Attribute, vals/attrib., type, isNormalized, stride, offset
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 0);
+	//Attribute, vals/attrib., type, isNormalized, stride, offset
 	glEnableVertexAttribArray(posAttrib);
-	
+
 	//GLint colAttrib = glGetAttribLocation(texturedShader, "inColor");
 	//glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3*sizeof(float)));
 	//glEnableVertexAttribArray(colAttrib);
-	
+
 	GLint normAttrib = glGetAttribLocation(texturedShader, "inNormal");
-	glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(5*sizeof(float)));
+	glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
 	glEnableVertexAttribArray(normAttrib);
-	
+
 	GLint texAttrib = glGetAttribLocation(texturedShader, "inTexcoord");
 	glEnableVertexAttribArray(texAttrib);
-	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3*sizeof(float)));
+	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 
 	GLint uniView = glGetUniformLocation(texturedShader, "view");
 	GLint uniProj = glGetUniformLocation(texturedShader, "proj");
 
 	glBindVertexArray(0); //Unbind the VAO in case we want to create a new one	
-                       
-	glEnable(GL_DEPTH_TEST);  
 
-	printf("%s\n",INSTRUCTIONS);
+	glEnable(GL_DEPTH_TEST);
+
+	printf("%s\n", INSTRUCTIONS);
 
 
 	// get the map file data
@@ -321,16 +324,31 @@ int main(int argc, char *argv[]){
 	bool is_d = false;
 	bool is_q = false;
 	bool is_e = false;
-	int accel = 1;
-	
 
-	while (!quit){
+	//movement
+	int accel = 1;
+	float slowFactor = 0.75;
+
+	// mouse motion variables
+	static int xpos = screenWidth / 2; // = 400 to center the cursor in the window
+	static int ypos = screenHeight / 2; // = 300 to center the cursor in the window
+
+	//jump feature
+	float jumpStartTime = SDL_GetTicks() / 1000.f;
+	printf("jump start time is %f\n", jumpStartTime);
+	float MaxInAirTime = 0.8; //Leave ground to back to ground, total 1 second.
+	float HalfMaxInAirTime = MaxInAirTime / 2;
+	float jumpMaxHight = 1;
+	float jumpHight = 0;
+	bool inAir = false;
+
+	while (!quit) {
 		if (goal_found) {
 			printf("\n\n\n*******************************\n\nCongrats! You found the teapot!\n\n*******************************\n\n\n");
 			quit = true;
 		}
 
-		while (SDL_PollEvent(&windowEvent)){  //inspect all events in the queue
+		while (SDL_PollEvent(&windowEvent)) {  //inspect all events in the queue
 			const Uint8* state = SDL_GetKeyboardState(NULL);
 
 
@@ -339,9 +357,14 @@ int main(int argc, char *argv[]){
 			//Scancode referes to a keyboard position, keycode referes to the letter (e.g., EU keyboards)
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_ESCAPE)
 				quit = true; //Exit event loop
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_f){ //If "f" is pressed
+			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_f) { //If "f" is pressed
 				fullscreen = !fullscreen;
 				SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Toggle fullscreen 
+			}
+			if(windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE && inAir==false) { // if "space" is pressed and character is not in air (character on ground)
+				jumpStartTime = SDL_GetTicks() / 1000.f;
+				printf("jump start time is %f\n", jumpStartTime);
+				inAir = true;
 			}
 
 
@@ -366,10 +389,21 @@ int main(int argc, char *argv[]){
 				if (windowEvent.key.keysym.sym == SDLK_d) is_d = false;
 				if (windowEvent.key.keysym.sym == SDLK_q) is_q = false;
 				if (windowEvent.key.keysym.sym == SDLK_e) is_e = false;
+				
 			}
+
+			//If mouse motion event happened
+			if (windowEvent.type == SDL_MOUSEMOTION)
+			{
+				//Get mouse position
+				xpos += windowEvent.motion.xrel;
+				ypos += windowEvent.motion.yrel;
+				printf("Mouse x= %d\n", xpos);
+				printf("Mouse y= %d\n", ypos);
+
+			}
+
 		}
-
-
 
 		float v_x = 0.0;
 		float v_z = 0.0;
@@ -384,13 +418,17 @@ int main(int argc, char *argv[]){
 			v_z = v_z - cam_speed * cam_dir.z * accel;
 		}
 		if (is_a) {  // If "a key" is pressed
-			w = w - cam_speed;
+			v_x = v_x + cam_speed * cam_dir.z * accel * slowFactor;
+			v_z = v_z - cam_speed * cam_dir.x * accel * slowFactor;
 		}
 		if (is_d) {  // If "d key" is pressed
-			w = w + cam_speed;
+			v_x = v_x - cam_speed * cam_dir.z * accel * slowFactor;
+			v_z = v_z + cam_speed * cam_dir.x * accel * slowFactor;
 		}
-		cam_angle = cam_angle + w * dt;
+		cam_angle = double(xpos) / 1000;
+		cam_dir.y = double(-ypos) / 1000;
 		setCamDirFromAngle(cam_angle);
+
 		
 
 
@@ -398,7 +436,7 @@ int main(int argc, char *argv[]){
 		float new_x = cam_pos.x + v_x * dt;
 		float new_z = cam_pos.z + v_z * dt;
 		// return true if movement does not collide with objects
-		if ( isWalkableAndEvents(new_x, new_z, map_data) ) {
+		if (isWalkableAndEvents(new_x, new_z, map_data)) {
 			// change camera position if we should move
 			cam_pos.x = new_x;
 			cam_pos.z = new_z;
@@ -422,11 +460,31 @@ int main(int argc, char *argv[]){
 		dt = time - timePast;
 		timePast = time;
 
-		glm::mat4 view = glm::lookAt(cam_pos, cam_pos+cam_dir, cam_up);
+		//change camera postion if character is inAir (jump)
+		float jumpPassTime = time - jumpStartTime;
+		if (jumpPassTime >= MaxInAirTime) {
+			inAir = false; 
+			cam_pos.y = 0;
+		}
+		else { 
+			float tempX = 0;
+			if (jumpPassTime < HalfMaxInAirTime) {
+				tempX = jumpPassTime;
+			}
+			else {
+				tempX = MaxInAirTime - jumpPassTime;
+			}
+			jumpHight = jumpMaxHight * tempX / HalfMaxInAirTime;
+			cam_pos.y = jumpHight;
+		}
+
+
+
+		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);
 
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-		glm::mat4 proj = glm::perspective(3.14f/4, screenWidth / (float) screenHeight, 0.1f, 40.0f); //FOV, aspect, near, far
+		glm::mat4 proj = glm::perspective(3.14f / 4, screenWidth / (float)screenHeight, 0.1f, 40.0f); //FOV, aspect, near, far
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
 
@@ -440,20 +498,20 @@ int main(int argc, char *argv[]){
 
 		glBindVertexArray(vao);
 		drawGeometry(texturedShader, startVertCube, numVertsCube, startVertTeapot, numVertsTeapot, startVertFloor, numVertsFloor,
-					startVertKey, numVertsKey, map_data);
+			startVertKey, numVertsKey, map_data);
 
 		SDL_GL_SwapWindow(window); //Double buffering
 	}
-	
+
 	//Clean Up
-	delete [] model1;
-	delete [] model2;
-	delete [] model3;
-	delete [] model4;
+	delete[] model1;
+	delete[] model2;
+	delete[] model3;
+	delete[] model4;
 	delete map_data.data;
 	glDeleteProgram(texturedShader);
-    glDeleteBuffers(1, vbo);
-    glDeleteVertexArrays(1, &vao);
+	glDeleteBuffers(1, vbo);
+	glDeleteVertexArrays(1, &vao);
 
 	SDL_GL_DeleteContext(context);
 	SDL_Quit();
@@ -462,13 +520,13 @@ int main(int argc, char *argv[]){
 
 // all rendering code goes here
 void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int model2_start, int model2_numVerts,
-					int model3_start, int model3_numVerts, int model4_start, int model4_numVerts, MapFile map_data){
-	
+	int model3_start, int model3_numVerts, int model4_start, int model4_numVerts, MapFile map_data) {
+
 	GLint uniColor = glGetUniformLocation(shaderProgram, "inColor");
-	glm::vec3 colVec(1,1,1);
+	glm::vec3 colVec(1, 1, 1);
 	glUniform3fv(uniColor, 1, glm::value_ptr(colVec));
-      
-    GLint uniTexID = glGetUniformLocation(shaderProgram, "texID");
+
+	GLint uniTexID = glGetUniformLocation(shaderProgram, "texID");
 	GLint uniModel = glGetUniformLocation(shaderProgram, "model");
 
 	static bool cam_start = true;
@@ -479,7 +537,7 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 	// model 1 is a cube
 	// model 2 is a teapot
 	// model 3 is a square for floor
-	for (int j = 0; j < map_data.height; j++) { 
+	for (int j = 0; j < map_data.height; j++) {
 		for (int i = 0; i < map_data.width; i++) {
 			char map_type = map_data.data[j * map_data.width + i];
 			if (map_type == 'W') {  // create walls
@@ -517,7 +575,7 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 				model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
 				model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 0.0f));
 				model = glm::rotate(model, -3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
-				
+
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 
 				//Set which texture to use (-1 = no texture)
@@ -554,7 +612,7 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 				else colVec = colorE;
 				glUniform3fv(uniColor, 1, glm::value_ptr(colVec));
 
-				glm::mat4 model = glm::mat4(1); 
+				glm::mat4 model = glm::mat4(1);
 				model = glm::translate(model, glm::vec3(i, 0, j));
 
 				//Set which texture to use (-1 = no texture ... bound to GL_TEXTURE1)
@@ -664,14 +722,14 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 		// set color
 		if (activeKey == 'a') colVec = colorA;
 		else if (activeKey == 'b') colVec = colorB;
-		else if (activeKey == 'c') colVec = colorC; 
+		else if (activeKey == 'c') colVec = colorC;
 		else if (activeKey == 'd') colVec = colorD;
 		else colVec = colorE;
 		glUniform3fv(uniColor, 1, glm::value_ptr(colVec));
 
 		// use key that is
 		glm::mat4 model = glm::mat4(1);
-		model = glm::translate(model, glm::vec3(cam_pos.x + cam_dir.x/2, -0.1, cam_pos.z + cam_dir.z/2));
+		model = glm::translate(model, glm::vec3(cam_pos.x + cam_dir.x / 2, cam_pos.y-0.1, cam_pos.z + cam_dir.z / 2));
 		model = glm::scale(model, glm::vec3(.03f, .03f, .03f));
 		model = glm::rotate(model, -cam_angle, glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, -3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -686,10 +744,10 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 }
 
 // Create a NULL-terminated string by reading the provided file
-static char* readShaderSource(const char* shaderFile){
-	FILE *fp;
+static char* readShaderSource(const char* shaderFile) {
+	FILE* fp;
 	long length;
-	char *buffer;
+	char* buffer;
 
 	// open the file containing the text of the shader code
 	fp = fopen(shaderFile, "r");
@@ -722,9 +780,9 @@ static char* readShaderSource(const char* shaderFile){
 }
 
 // Create a GLSL program object from vertex and fragment shader files
-GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName){
+GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName) {
 	GLuint vertex_shader, fragment_shader;
-	GLchar *vs_text, *fs_text;
+	GLchar* vs_text, * fs_text;
 	GLuint program;
 
 	// check GLSL version
@@ -734,86 +792,86 @@ GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName){
 	vertex_shader = glCreateShader(GL_VERTEX_SHADER);
 	fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
 
-// Read source code from shader files
-vs_text = readShaderSource(vShaderFileName);
-fs_text = readShaderSource(fShaderFileName);
+	// Read source code from shader files
+	vs_text = readShaderSource(vShaderFileName);
+	fs_text = readShaderSource(fShaderFileName);
 
-// error check
-if (vs_text == NULL) {
-	printf("Failed to read from vertex shader file %s\n", vShaderFileName);
-	exit(1);
-}
-else if (DEBUG_ON) {
-	printf("Vertex Shader:\n=====================\n");
-	printf("%s\n", vs_text);
-	printf("=====================\n\n");
-}
-if (fs_text == NULL) {
-	printf("Failed to read from fragent shader file %s\n", fShaderFileName);
-	exit(1);
-}
-else if (DEBUG_ON) {
-	printf("\nFragment Shader:\n=====================\n");
-	printf("%s\n", fs_text);
-	printf("=====================\n\n");
-}
-
-// Load Vertex Shader
-const char* vv = vs_text;
-glShaderSource(vertex_shader, 1, &vv, NULL);  //Read source
-glCompileShader(vertex_shader); // Compile shaders
-
-// Check for errors
-GLint  compiled;
-glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &compiled);
-if (!compiled) {
-	printf("Vertex shader failed to compile:\n");
-	if (DEBUG_ON) {
-		GLint logMaxSize, logLength;
-		glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &logMaxSize);
-		printf("printing error message of %d bytes\n", logMaxSize);
-		char* logMsg = new char[logMaxSize];
-		glGetShaderInfoLog(vertex_shader, logMaxSize, &logLength, logMsg);
-		printf("%d bytes retrieved\n", logLength);
-		printf("error message: %s\n", logMsg);
-		delete[] logMsg;
+	// error check
+	if (vs_text == NULL) {
+		printf("Failed to read from vertex shader file %s\n", vShaderFileName);
+		exit(1);
 	}
-	exit(1);
-}
-
-// Load Fragment Shader
-const char* ff = fs_text;
-glShaderSource(fragment_shader, 1, &ff, NULL);
-glCompileShader(fragment_shader);
-glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &compiled);
-
-//Check for Errors
-if (!compiled) {
-	printf("Fragment shader failed to compile\n");
-	if (DEBUG_ON) {
-		GLint logMaxSize, logLength;
-		glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &logMaxSize);
-		printf("printing error message of %d bytes\n", logMaxSize);
-		char* logMsg = new char[logMaxSize];
-		glGetShaderInfoLog(fragment_shader, logMaxSize, &logLength, logMsg);
-		printf("%d bytes retrieved\n", logLength);
-		printf("error message: %s\n", logMsg);
-		delete[] logMsg;
+	else if (DEBUG_ON) {
+		printf("Vertex Shader:\n=====================\n");
+		printf("%s\n", vs_text);
+		printf("=====================\n\n");
 	}
-	exit(1);
-}
+	if (fs_text == NULL) {
+		printf("Failed to read from fragent shader file %s\n", fShaderFileName);
+		exit(1);
+	}
+	else if (DEBUG_ON) {
+		printf("\nFragment Shader:\n=====================\n");
+		printf("%s\n", fs_text);
+		printf("=====================\n\n");
+	}
 
-// Create the program
-program = glCreateProgram();
+	// Load Vertex Shader
+	const char* vv = vs_text;
+	glShaderSource(vertex_shader, 1, &vv, NULL);  //Read source
+	glCompileShader(vertex_shader); // Compile shaders
 
-// Attach shaders to program
-glAttachShader(program, vertex_shader);
-glAttachShader(program, fragment_shader);
+	// Check for errors
+	GLint  compiled;
+	glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &compiled);
+	if (!compiled) {
+		printf("Vertex shader failed to compile:\n");
+		if (DEBUG_ON) {
+			GLint logMaxSize, logLength;
+			glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &logMaxSize);
+			printf("printing error message of %d bytes\n", logMaxSize);
+			char* logMsg = new char[logMaxSize];
+			glGetShaderInfoLog(vertex_shader, logMaxSize, &logLength, logMsg);
+			printf("%d bytes retrieved\n", logLength);
+			printf("error message: %s\n", logMsg);
+			delete[] logMsg;
+		}
+		exit(1);
+	}
 
-// Link and set program to use
-glLinkProgram(program);
+	// Load Fragment Shader
+	const char* ff = fs_text;
+	glShaderSource(fragment_shader, 1, &ff, NULL);
+	glCompileShader(fragment_shader);
+	glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &compiled);
 
-return program;
+	//Check for Errors
+	if (!compiled) {
+		printf("Fragment shader failed to compile\n");
+		if (DEBUG_ON) {
+			GLint logMaxSize, logLength;
+			glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &logMaxSize);
+			printf("printing error message of %d bytes\n", logMaxSize);
+			char* logMsg = new char[logMaxSize];
+			glGetShaderInfoLog(fragment_shader, logMaxSize, &logLength, logMsg);
+			printf("%d bytes retrieved\n", logLength);
+			printf("error message: %s\n", logMsg);
+			delete[] logMsg;
+		}
+		exit(1);
+	}
+
+	// Create the program
+	program = glCreateProgram();
+
+	// Attach shaders to program
+	glAttachShader(program, vertex_shader);
+	glAttachShader(program, fragment_shader);
+
+	// Link and set program to use
+	glLinkProgram(program);
+
+	return program;
 }
 
 // load in a file to draw maps with
@@ -947,7 +1005,7 @@ float* loadModelOBJ(const char* file_name, int& numLines) {
 			vertex_ind.push_back(v3); texture_ind.push_back(vt3); normal_ind.push_back(vn3);
 			num_tri++;
 		}
-		
+
 	}
 	fclose(fp);
 	numLines = vertex_ind.size() * 8;  // 3 floats for x,y,z of vertex, 2 for u,v texture coordinates, 3 for vertex normal x,y,z
@@ -962,16 +1020,16 @@ float* loadModelOBJ(const char* file_name, int& numLines) {
 	// for each vertex
 	for (int i = 0; i < vertex_ind.size(); i++) {
 		// vertex x,y,z
-		model1[(i * 8)] =     vertex_arr[vertex_ind[i]-1].x;
-		model1[(i * 8) + 1] = vertex_arr[vertex_ind[i]-1].y;
-		model1[(i * 8) + 2] = vertex_arr[vertex_ind[i]-1].z;
+		model1[(i * 8)] = vertex_arr[vertex_ind[i] - 1].x;
+		model1[(i * 8) + 1] = vertex_arr[vertex_ind[i] - 1].y;
+		model1[(i * 8) + 2] = vertex_arr[vertex_ind[i] - 1].z;
 		// texture map u,v
-		model1[(i * 8) + 3] = texture_arr[texture_ind[i]-1].x;
-		model1[(i * 8) + 4] = texture_arr[texture_ind[i]-1].y;
+		model1[(i * 8) + 3] = texture_arr[texture_ind[i] - 1].x;
+		model1[(i * 8) + 4] = texture_arr[texture_ind[i] - 1].y;
 		// vertex normal x,y,z
-		model1[(i * 8) + 5] = normal_arr[normal_ind[i]-1].x;
-		model1[(i * 8) + 6] = normal_arr[normal_ind[i]-1].y;
-		model1[(i * 8) + 7] = normal_arr[normal_ind[i]-1].z;
+		model1[(i * 8) + 5] = normal_arr[normal_ind[i] - 1].x;
+		model1[(i * 8) + 6] = normal_arr[normal_ind[i] - 1].y;
+		model1[(i * 8) + 7] = normal_arr[normal_ind[i] - 1].z;
 	}
 	printf("nice, successful obj loaded\n");
 	return model1;
@@ -1038,11 +1096,11 @@ void wallSlide(float newX, float newZ, MapFile map_data) {
 	//char top_map = map_data.data[ind + map_data.width];  // hitting cube on the top side of it is ind-map_data.width
 	//char bottom_map = map_data.data[ind - map_data.width];  // hitting cube on the bottom side of it is ind+map_data.width
 
-	char curr_map = map_data.data[(int)( (ceil(z + char_radius) - 1) * map_data.width + (ceil(x + char_radius) - 1) )];
-	char right_map = map_data.data[(int)( (ceil(z + char_radius) - 1) * map_data.width + (ceil(x + char_radius) - 1 ))-1];  // hitting cube on the right side of it is ind-1
-	char left_map = map_data.data[(int)( (ceil(z + char_radius) - 1) * map_data.width + (ceil(x + char_radius) - 1 ))+1];  // hitting cube on the left side of it is ind+1
-	char top_map = map_data.data[(int)( (ceil(z + char_radius)) * map_data.width + (ceil(x + char_radius) - 1) )];  // hitting cube on the top side of it is ind-map_data.width
-	char bottom_map = map_data.data[(int)( (ceil(z + char_radius) - 2) * map_data.width + (ceil(x + char_radius) - 1) )];  // hitting cube on the bottom side of it is ind+map_data.width
+	char curr_map = map_data.data[(int)((ceil(z + char_radius) - 1) * map_data.width + (ceil(x + char_radius) - 1))];
+	char right_map = map_data.data[(int)((ceil(z + char_radius) - 1) * map_data.width + (ceil(x + char_radius) - 1)) - 1];  // hitting cube on the right side of it is ind-1
+	char left_map = map_data.data[(int)((ceil(z + char_radius) - 1) * map_data.width + (ceil(x + char_radius) - 1)) + 1];  // hitting cube on the left side of it is ind+1
+	char top_map = map_data.data[(int)((ceil(z + char_radius)) * map_data.width + (ceil(x + char_radius) - 1))];  // hitting cube on the top side of it is ind-map_data.width
+	char bottom_map = map_data.data[(int)((ceil(z + char_radius) - 2) * map_data.width + (ceil(x + char_radius) - 1))];  // hitting cube on the bottom side of it is ind+map_data.width
 
 	//string all(1, curr_map);
 	//all.append(1, right_map); all.append(1, left_map); all.append(1, top_map); all.append(1, bottom_map);
@@ -1053,7 +1111,7 @@ void wallSlide(float newX, float newZ, MapFile map_data) {
 
 	if (verbose) printf("r %c   l %c   t %c   b %c   ", right_map, left_map, top_map, bottom_map);
 	// don't move if you are on a blocked tile and or if there are 2 blocked things
-	if ( !(isDoor(curr_map) || isWall(curr_map)) ) {
+	if (!(isDoor(curr_map) || isWall(curr_map))) {
 		// if right side and we are hitting a wall or closed door
 		if ((isDoor(right_map) || isWall(right_map))) {
 			if (verbose) printf("hitting right side of cube\n");
@@ -1086,10 +1144,10 @@ void wallSlide(float newX, float newZ, MapFile map_data) {
 				cam_pos.x = newX;
 			}
 		}
-	if (right_map == 'O' && left_map == 'O' && top_map == 'O' && bottom_map == 'O') {
-		if (verbose) printf("no obstruction, keep it going\n");
-		cam_pos.x = newX;
-		cam_pos.z = newZ;
-	}
+		if (right_map == 'O' && left_map == 'O' && top_map == 'O' && bottom_map == 'O') {
+			if (verbose) printf("no obstruction, keep it going\n");
+			cam_pos.x = newX;
+			cam_pos.z = newZ;
+		}
 	}
 }
