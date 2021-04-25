@@ -155,6 +155,10 @@ int main(int argc, char *argv[]){
 	//Load Model 1 - cube
 	ifstream modelFile;
 	modelFile.open("models/cube.txt");
+	//test
+	if (!modelFile.is_open()) {
+		printf("cube not open\n");
+	}
 	int numLines = 0;
 	modelFile >> numLines;
 	float* model1 = new float[numLines];
@@ -379,10 +383,10 @@ int main(int argc, char *argv[]){
 			v_x = v_x - cam_speed * cam_dir.x * accel;
 			v_z = v_z - cam_speed * cam_dir.z * accel;
 		}
-		if (is_a) {  // If "q key" is pressed
+		if (is_a) {  // If "a key" is pressed
 			w = w - cam_speed;
 		}
-		if (is_d) {  // If "e key" is pressed
+		if (is_d) {  // If "d key" is pressed
 			w = w + cam_speed;
 		}
 		cam_angle = cam_angle + w * dt;
