@@ -24,7 +24,7 @@ void main() {
    pos = (view * model * vec4(position,1.0)).xyz;
 
    for (int i=0; i < POINT_LIGHTS_SIZE; i++) {
-      pointLightsPOS[i] = (view * vec4(inPointLightsPOS[i],0.0)).xyz;
+      pointLightsPOS[i] = (view * vec4(inPointLightsPOS[i],1.0)).xyz;
       pointLightsCOLOR[i] = inPointLightsCOLOR[i];
    }
 
