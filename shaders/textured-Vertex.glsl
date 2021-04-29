@@ -12,7 +12,7 @@ uniform mat4 proj;
 uniform vec3 inPointLightsPOS[POINT_LIGHTS_SIZE];
 uniform vec3 inPointLightsCOLOR[POINT_LIGHTS_SIZE];
 
-out vec3 pointLightsDIR[POINT_LIGHTS_SIZE];
+out vec3 pointLightsPOS[POINT_LIGHTS_SIZE];
 out vec3 pointLightsCOLOR[POINT_LIGHTS_SIZE];
 
 out vec3 vertNormal;
@@ -24,13 +24,9 @@ void main() {
    pos = (view * model * vec4(position,1.0)).xyz;
 
    for (int i=0; i < POINT_LIGHTS_SIZE; i++) {
-      vec3 lightPos = (view * vec4(inPointLightsPOS[i],0.0)).xyz; //It's a vector!
-      pointLightsDIR[i] = pos-lightPos;
+      pointLightsPOS[i] = (view * vec4(inPointLightsPOS[i],0.0)).xyz;
       pointLightsCOLOR[i] = inPointLightsCOLOR[i];
    }
-   // vec3 lightPos = (view * vec4(inLightPos,0.0)).xyz; //It's a vector!
-   // lightDir = normalize(pos-lightPos);
-   // lightColor = inLightColor;
 
    vec4 norm4 = transpose(inverse(view*model)) * vec4(inNormal,0.0);
    vertNormal = normalize(norm4.xyz);

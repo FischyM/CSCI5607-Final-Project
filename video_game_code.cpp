@@ -1,7 +1,6 @@
 // Mathew Fischbach, CSCI 5607
 // Code adapted from Stephen Guy
 
-
 const char* INSTRUCTIONS = "Press W and S to move forward and backwards\n\
 Press A and D to rotate left and right.\n\
 Find the teapot to win!\n\
@@ -86,8 +85,8 @@ struct Material {
 	//float d;  // 1.0 for "d" is the default and means fully opaque, as does a value of 0.0 for "Tr"
 	//float illum;  // illumination model type, maybe need this?
 	void debug() {
-		printf("Material\nKa: (%f,%f,%f)\nKd: (%f,%f,%f)\nKs: (%f,%f,%f)\nKe: (%f,%f,%f)\nNs: %f\n",
-			Ka.x, Ka.y, Ka.z, Kd.x, Kd.y, Kd.z, Ks.x, Ks.y, Ks.z, Ke.x, Ke.y, Ke.z, Ns);
+		printf("Material\nName: %s\nKa: (%f,%f,%f)\nKd: (%f,%f,%f)\nKs: (%f,%f,%f)\nKe: (%f,%f,%f)\nNs: %f\n",
+			newmtl, Ka.x, Ka.y, Ka.z, Kd.x, Kd.y, Kd.z, Ks.x, Ks.y, Ks.z, Ke.x, Ke.y, Ke.z, Ns);
 	}
 };
 
@@ -108,18 +107,19 @@ struct PointLights {
 
 PointLights point_lights;
 
-struct MapFile{
+struct MapFile {
 	int width = 0;
 	int height = 0;
 	char* data = NULL;
 };
 
-map <char, bool> doorOpen =  { {'A',false}, {'B',false}, {'C',false}, {'D',false}, {'E',false} };
+map <char, bool> doorOpen = { {'A',false}, {'B',false}, {'C',false}, {'D',false}, {'E',false} };
 map <char, char> doorToKey = { {'A','a'},   {'B','b'},   {'C','c'},   {'D','d'},   {'E','e'} };
 
 void setCamDirFromAngle(float cam_angle) {
 	cam_dir.z = glm::sin(cam_angle);
 	cam_dir.x = glm::cos(cam_angle);
+	cam_dir = glm::normalize(cam_dir);
 }
 
 bool isDoor(char type) {
@@ -140,16 +140,11 @@ bool isWall(char type) {
 	return type == 'W';
 }
 
-void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int model2_start, int model2_numVerts,
-	int model3_start, int model3_numVerts, int model4_start, int model4_numVerts, MapFile map_data);
+void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> modelStarts, MapFile map_data);
 
 static char* readShaderSource(const char* shaderFile);
 
 void loadMapFile(const char* file_name, MapFile& map_data);
-
-float* loadModelOBJwithVT(const char* file_name, int& numLines);
-
-float* loadModelOBJnoVTwithSquares(const char* file_name, int& numLines);
 
 void dropKey(float vx, float vz, MapFile map_data);
 
@@ -157,13 +152,15 @@ bool isWalkableAndEvents(float newX, float newZ, MapFile map_data);
 
 void wallSlide(float newX, float newZ, MapFile map_data);
 
+float* loadModelOBJwithMTL(const char* file_name, int& numLines, const char* file_nameMTL, vector<Material>& mat_list);
+
 void loadModelMTL(const char* file_name, vector<Material>& mat_list);
 
 void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind);
 
 void SetLights(int shaderProgram, PointLights point_lights);
 
-int main(int argc, char *argv[]){
+int main(int argc, char* argv[]) {
 	SDL_Init(SDL_INIT_VIDEO);  //Initialize Graphics (for OpenGL)
 
 	//Ask SDL to get a recent version of OpenGL (3.2 or greater)
@@ -192,56 +189,8 @@ int main(int argc, char *argv[]){
 		return -1;
 	}
 
-	//Here we will load three different model files 
 
-	//Load Model 1 - cube
-	ifstream modelFile;
-	modelFile.open("models/cube.txt");
-	//test
-	if (!modelFile.is_open()) {
-		printf("cube not open\n");
-	}
-	int numLines = 0;
-	modelFile >> numLines;
-	float* model1 = new float[numLines];
-	for (int i = 0; i < numLines; i++) {
-		modelFile >> model1[i];
-	}
-	printf("%d\n", numLines);
-	int numVertsCube = numLines / 8;
-	modelFile.close();
 
-	//Load Model 2 - teapot
-	modelFile.open("models/teapot.txt");
-	numLines = 0;
-	modelFile >> numLines;
-	float* model2 = new float[numLines];
-	for (int i = 0; i < numLines; i++) {
-		modelFile >> model2[i];
-	}
-	printf("%d\n", numLines);
-	int numVertsTeapot = numLines / 8;
-	modelFile.close();
-
-	//Load Model 3 - floor
-	modelFile.open("models/floor.txt");
-	numLines = 0;
-	modelFile >> numLines;
-	float* model3 = new float[numLines];
-	for (int i = 0; i < numLines; i++) {
-		modelFile >> model3[i];
-	}
-	printf("%d\n", numLines);
-	int numVertsFloor = numLines / 8;
-	modelFile.close();
-
-	// load model 4 - key and it's material
-	numLines = 0;
-	// no texture coordinates
-	float* model4 = loadModelOBJnoVTwithSquares("models/key1.obj", numLines);
-	int numVertsKey = numLines / 8;
-	printf("%d, %d\n", numLines, numVertsKey);
-	
 	// light emmitting material - 0
 	loadModelMTL("models/light.mtl", mat_list);
 
@@ -252,73 +201,135 @@ int main(int argc, char *argv[]){
 	loadModelMTL("models/key4.mtl", mat_list);
 	loadModelMTL("models/key5.mtl", mat_list);
 
-	
+
+
+	//Here we will load three different model files 
+	const int n = 8;
+	//Load Model 1 - cube
+	ifstream modelFile;
+	modelFile.open("models/cube-copy.txt");
+	//test
+	if (!modelFile.is_open()) {
+		printf("cube not open\n");
+	}
+	int numLines = 0;
+	modelFile >> numLines;
+	float* modelCube = new float[numLines];
+	for (int i = 0; i < numLines; i++) {
+		modelFile >> modelCube[i];
+	}
+	printf("%d\n", numLines);
+	int numVertsCube = numLines / n;
+	modelFile.close();
+
+	//Load Model 2 - sword
+	numLines = 0;
+	float* modelSword = loadModelOBJwithMTL("models/sword-tri.obj", numLines, "models/sword-tri.mtl", mat_list);
+	int numVertsSword = numLines / n;
+	printf("%d, %d\n", numLines, numVertsSword);
+
+	//Load Model 3 - floor
+	numLines = 0;
+	float* modelFloor = loadModelOBJwithMTL("models/ModularFloor-tri.obj", numLines, "models/ModularFloor-tri.mtl", mat_list);
+	int numVertsFloor = numLines / n;
+	printf("%d, %d\n", numLines, numVertsFloor);
+
+	// load model 4 - key and it's material
+	numLines = 0;
+	float* modelKey1 = loadModelOBJwithMTL("models/key1-tri.obj", numLines, "models/key1-tri.mtl", mat_list);
+	int numVertsKey1 = numLines / n;
+	printf("%d, %d\n", numLines, numVertsKey1);
+
+	// load model 5 - potion and it's material
+	numLines = 0;
+	float* modelPotion = loadModelOBJwithMTL("models/potion-tri.obj", numLines, "models/potion-tri.mtl", mat_list);
+	int numVertsPotion = numLines / n;
+	printf("%d, %d\n", numLines, numVertsPotion);
+
+	// load model 6 - crumbling wall
+	numLines = 0;
+	float* modelWall = loadModelOBJwithMTL("models/wall-broken.obj", numLines, "models/wall-broken.mtl", mat_list);
+	int numVertsWall = numLines / n;
+	printf("%d, %d\n", numLines, numVertsWall);
+
+
+
 	//SJG: I load each model in a different array, then concatenate everything in one big array
 	// This structure works, but there is room for improvement here. Eg., you should store the start
 	// and end of each model a data structure or array somewhere.
 	//Concatenate model arrays
-	float* modelData = new float[(numVertsCube + numVertsTeapot + numVertsFloor + numVertsKey) * 8];
-	copy(model1, model1 + numVertsCube * 8, modelData);
-	copy(model2, model2 + numVertsTeapot * 8, modelData + numVertsCube * 8);
-	copy(model3, model3 + numVertsFloor * 8, modelData + numVertsCube * 8 + numVertsTeapot * 8);
-	copy(model4, model4 + numVertsKey * 8, modelData + numVertsCube * 8 + numVertsTeapot * 8 + numVertsFloor * 8);
-	int totalNumVerts = numVertsCube + numVertsTeapot + numVertsFloor + numVertsKey;
+	float* modelData = new float[(numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall) * n];
+	copy(modelCube,   modelCube + numVertsCube * n,     modelData);
+	copy(modelSword,  modelSword + numVertsSword * n,   modelData + numVertsCube * n);
+	copy(modelFloor,  modelFloor + numVertsFloor * n,   modelData + numVertsCube * n + numVertsSword * n);
+	copy(modelKey1,   modelKey1 + numVertsKey1 * n,     modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n);
+	copy(modelPotion, modelPotion + numVertsPotion * n, modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n);
+	copy(modelWall,   modelWall + numVertsWall * n,     modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n);
+
+	int totalNumVerts = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall;
 	int startVertCube = 0;  //The cube is the first model in the VBO
-	int startVertTeapot = numVertsCube; //The teapot starts right after the cube
-	int startVertFloor =  numVertsCube + numVertsTeapot; //The floor starts right after the teapot
-	int startVertKey =    numVertsCube + numVertsTeapot + numVertsFloor; //The floor starts right after the floor
-	
+	int startVertSword = numVertsCube; //The sword starts right after the cube
+	int startVertFloor = numVertsCube + numVertsSword; //The floor starts right after the sword
+	int startVertKey = numVertsCube + numVertsSword + numVertsFloor; //The key starts right after the floor
+	int startPotion = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1;
+	int startWall = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion;
+
+	// use these for DrawGeometry, its too cumbersome to add all of them
+	vector<int> modelNumVerts = { numVertsCube, numVertsSword, numVertsFloor, numVertsKey1, numVertsPotion, numVertsWall };
+	vector<int> modelStarts = { startVertCube, startVertSword, startVertFloor, startVertKey, startPotion, startWall };
+
 
 	//// Allocate Texture 0 (Wood) ///////
 	SDL_Surface* surface = SDL_LoadBMP("textures/wood.bmp");
-	if (surface==NULL){ //If it failed, print the error
-        printf("Error: \"%s\"\n",SDL_GetError()); return 1;
-    }
-    GLuint tex0;
-    glGenTextures(1, &tex0);
-    
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tex0);
-    
-    //What to do outside 0-1 range
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    //Load the texture into memory
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w,surface->h, 0, GL_BGR,GL_UNSIGNED_BYTE,surface->pixels);
-    glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
-    
-    SDL_FreeSurface(surface);
-    //// End Allocate Texture ///////
+
+	if (surface == NULL) { //If it failed, print the error
+		printf("Error: \"%s\"\n", SDL_GetError()); return 1;
+	}
+	GLuint tex0;
+	glGenTextures(1, &tex0);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, tex0);
+
+	//What to do outside 0-1 range
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	//Load the texture into memory
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_BGR, GL_UNSIGNED_BYTE, surface->pixels);
+	glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
+
+	SDL_FreeSurface(surface);
+	//// End Allocate Texture ///////
 
 
 	//// Allocate Texture 1 (Brick) ///////
-	SDL_Surface* surface1 = SDL_LoadBMP("textures/brick.bmp");
-	if (surface==NULL){ //If it failed, print the error
-        printf("Error: \"%s\"\n",SDL_GetError()); return 1;
-    }
-    GLuint tex1;
-    glGenTextures(1, &tex1);
-    
-    //Load the texture into memory
-    glActiveTexture(GL_TEXTURE1);
-    
-    glBindTexture(GL_TEXTURE_2D, tex1);
-    //What to do outside 0-1 range
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    //How to filter
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface1->w,surface1->h, 0, GL_BGR,GL_UNSIGNED_BYTE,surface1->pixels);
-    glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
-    
-    SDL_FreeSurface(surface1);
+	SDL_Surface* surface1 = SDL_LoadBMP("textures/greybrickwall007x800.bmp");
+	if (surface == NULL) { //If it failed, print the error
+		printf("Error: \"%s\"\n", SDL_GetError()); return 1;
+	}
+	GLuint tex1;
+	glGenTextures(1, &tex1);
+
+	//Load the texture into memory
+	glActiveTexture(GL_TEXTURE1);
+
+	glBindTexture(GL_TEXTURE_2D, tex1);
+	//What to do outside 0-1 range
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//How to filter
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface1->w, surface1->h, 0, GL_BGR, GL_UNSIGNED_BYTE, surface1->pixels);
+	glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
+
+	SDL_FreeSurface(surface1);
 	//// End Allocate Texture ///////
-	
+
 
 
 
@@ -337,12 +348,12 @@ int main(int argc, char *argv[]){
 	glBufferData(GL_ARRAY_BUFFER, static_cast<unsigned long long>(totalNumVerts) * 8 * sizeof(float), modelData, GL_STATIC_DRAW); //upload vertices to vbo
 	//GL_STATIC_DRAW means we won't change the geometry, GL_DYNAMIC_DRAW = geometry changes infrequently
 	//GL_STREAM_DRAW = geom. changes frequently.  This effects which types of GPU memory is used
-	
-	int texturedShader = InitShader("shaders/textured-Vertex.glsl", "shaders/textured-Fragment.glsl");	
-	
+
+	int texturedShader = InitShader("shaders/textured-Vertex.glsl", "shaders/textured-Fragment.glsl");
+
 	//Tell OpenGL how to set fragment shader input 
 	GLint posAttrib = glGetAttribLocation(texturedShader, "position");
-	glVertexAttribPointer(posAttrib,  3, GL_FLOAT, GL_FALSE, 8*sizeof(float), 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 0);
 	//Attribute, vals/attrib., type, isNormalized, stride, offset
 	glEnableVertexAttribArray(posAttrib);
 
@@ -377,7 +388,7 @@ int main(int argc, char *argv[]){
 	int count = 0;
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
-			point_lights.pos[count] = glm::vec3(3+i*10, 2, 3+j*10);  // remember, y is up
+			point_lights.pos[count] = glm::vec3(3 + i * 10, 1, 3 + j * 10);  // remember, y is up
 			point_lights.color[count] = glm::vec3(10, 10, 10);
 			count++;
 		}
@@ -408,12 +419,21 @@ int main(int argc, char *argv[]){
 
 	//jump feature
 	float jumpStartTime = SDL_GetTicks() / 1000.f;
-	printf("jump start time is %f\n", jumpStartTime);
+	//printf("jump start time is %f\n", jumpStartTime);
 	float MaxInAirTime = 0.8; //Leave ground to back to ground, total 1 second.
 	float HalfMaxInAirTime = MaxInAirTime / 2;
 	float jumpMaxHight = 1;
 	float jumpHight = 0;
 	bool inAir = false;
+
+
+	
+	for (int i = 0; i < mat_list.size(); i++) {
+		cout << i << " ";
+		mat_list[i].debug();
+	}
+	printf("number of materials right now: %d\n", mat_list.size());
+
 
 	while (!quit) {
 		if (goal_found) {
@@ -434,9 +454,9 @@ int main(int argc, char *argv[]){
 				fullscreen = !fullscreen;
 				SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Toggle fullscreen 
 			}
-			if(windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE && inAir==false) { // if "space" is pressed and character is not in air (character on ground)
+			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE && inAir == false) { // if "space" is pressed and character is not in air (character on ground)
 				jumpStartTime = SDL_GetTicks() / 1000.f;
-				printf("jump start time is %f\n", jumpStartTime);
+				//printf("jump start time is %f\n", jumpStartTime);
 				inAir = true;
 			}
 
@@ -462,7 +482,7 @@ int main(int argc, char *argv[]){
 				if (windowEvent.key.keysym.sym == SDLK_d) is_d = false;
 				if (windowEvent.key.keysym.sym == SDLK_q) is_q = false;
 				if (windowEvent.key.keysym.sym == SDLK_e) is_e = false;
-				
+
 			}
 
 			//If mouse motion event happened
@@ -471,8 +491,8 @@ int main(int argc, char *argv[]){
 				//Get mouse position
 				xpos += windowEvent.motion.xrel;
 				ypos += windowEvent.motion.yrel;
-				printf("Mouse x= %d\n", xpos);
-				printf("Mouse y= %d\n", ypos);
+				//printf("Mouse x= %d\n", xpos);
+				//printf("Mouse y= %d\n", ypos);
 
 			}
 
@@ -502,7 +522,7 @@ int main(int argc, char *argv[]){
 		cam_dir.y = double(-ypos) / 1000;
 		setCamDirFromAngle(cam_angle);
 
-		
+
 
 
 		// check for collision
@@ -536,10 +556,10 @@ int main(int argc, char *argv[]){
 		//change camera postion if character is inAir (jump)
 		float jumpPassTime = time - jumpStartTime;
 		if (jumpPassTime >= MaxInAirTime) {
-			inAir = false; 
+			inAir = false;
 			cam_pos.y = 0;
 		}
-		else { 
+		else {
 			float tempX = 0;
 			if (jumpPassTime < HalfMaxInAirTime) {
 				tempX = jumpPassTime;
@@ -553,7 +573,7 @@ int main(int argc, char *argv[]){
 
 
 
-		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);
+		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);  // TODO is this the issue?
 
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
@@ -570,17 +590,18 @@ int main(int argc, char *argv[]){
 		glUniform1i(glGetUniformLocation(texturedShader, "tex1"), 1);
 
 		glBindVertexArray(vao);
-		drawGeometry(texturedShader, startVertCube, numVertsCube, startVertTeapot, numVertsTeapot, startVertFloor, numVertsFloor,
-			startVertKey, numVertsKey, map_data);
+		drawGeometry(texturedShader, modelNumVerts, modelStarts, map_data);
 
 		SDL_GL_SwapWindow(window); //Double buffering
 	}
 
 	//Clean Up
-	delete[] model1;
-	delete[] model2;
-	delete[] model3;
-	delete[] model4;
+	delete[] modelCube;
+	delete[] modelSword;
+	delete[] modelFloor;
+	delete[] modelKey1;
+	delete[] modelPotion;
+	delete[] modelData;
 	delete map_data.data;
 	glDeleteProgram(texturedShader);
 	glDeleteBuffers(1, vbo);
@@ -592,10 +613,9 @@ int main(int argc, char *argv[]){
 }
 
 // all rendering code goes here
-void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int model2_start, int model2_numVerts,
-					int model3_start, int model3_numVerts, int model4_start, int model4_numVerts, MapFile map_data){
-	
-    GLint uniTexID = glGetUniformLocation(shaderProgram, "texID");
+void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> modelStarts, MapFile map_data) {
+
+	GLint uniTexID = glGetUniformLocation(shaderProgram, "texID");
 	GLint uniModel = glGetUniformLocation(shaderProgram, "model");
 
 
@@ -610,16 +630,19 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 	// Draw map file models
 	// go through each map tile
 	//*************
-	// model 1 is a cube
-	// model 2 is a teapot
-	// model 3 is a square for floor
-	// mdoel 4 is a key
-	for (int j = 0; j < map_data.height; j++) { 
+	// indexes for models
+	// modelCube;   0
+	// modelSword;  1
+	// modelFloor;  2
+	// modelKey1;   3
+	// modelPotion; 4
+	// breakable wall 5
+	for (int j = 0; j < map_data.height; j++) {
 		for (int i = 0; i < map_data.width; i++) {
 			char map_type = map_data.data[j * map_data.width + i];
-			
+			bool draw_floor = false;
 			// create walls
-			if (map_type == 'W') {  
+			if (map_type == 'W') {
 				glm::mat4 model = glm::mat4(1);
 				model = glm::translate(model, glm::vec3(i, 0, j));
 				model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -629,60 +652,49 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 				glUniform1i(uniTexID, 1);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
-				glDrawArrays(GL_TRIANGLES, model1_start, model1_numVerts); //(Primitive Type, Start Vertex, Num Verticies)
+				glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]); //(Primitive Type, Start Vertex, Num Verticies)
 
 			}
+			// breakable wall
+			else if (map_type == 'w') {
+				glm::mat4 model = glm::mat4(1);
+				model = glm::translate(model, glm::vec3(i, 0, j));
+				model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+				SetMaterial(shaderProgram, mat_list, 16);
+
+				glUniform1i(uniTexID, -1);
+				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+				glDrawArrays(GL_TRIANGLES, modelStarts[5], modelNumVerts[5]);
+			}
 			// set camera to S position
-			else if (map_type == 'S') {  
+			else if (map_type == 'S') {
 				if (cam_start) {
 					cam_pos.x = (float)i;
 					cam_pos.z = (float)j;
 					cam_start = false;
 				}
-
-				// draw the floor
-				glm::mat4 model = glm::mat4(1);
-				model = glm::translate(model, glm::vec3(i, 0, j));
-				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
-				//Set which texture to use (0 = wood)
-				glUniform1i(uniTexID, 0);
-				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
-				glDrawArrays(GL_TRIANGLES, model3_start, model3_numVerts); //(Primitive Type, Start Vertex, Num Verticies
+				draw_floor = true;
 			}
 			// create goal
-			else if (map_type == 'G') {  
+			else if (map_type == 'G') {
 				glm::mat4 model = glm::mat4(1);
-				model = glm::translate(model, glm::vec3(i, sin(timePast) * 0.18, j));
-				model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
+				model = glm::translate(model, glm::vec3(i, sin(timePast) * 0.14, j));
+				model = glm::scale(model, glm::vec3(.11f));
 				model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 0.0f));
-				model = glm::rotate(model, -3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
-
+				
+				SetMaterial(shaderProgram, mat_list, 16);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 
 				//Set which texture to use (-1 = no texture)
 				glUniform1i(uniTexID, -1);
 				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
-				glDrawArrays(GL_TRIANGLES, model2_start, model2_numVerts); //(Primitive Type, Start Vertex, Num Verticies)
+				glDrawArrays(GL_TRIANGLES, modelStarts[1], modelNumVerts[1]); //(Primitive Type, Start Vertex, Num Verticies)
 
-
-				// draw the floor
-				model = glm::mat4(1);
-				model = glm::translate(model, glm::vec3(i, 0, j));
-				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
-				//Set which texture to use (0 = wood)
-				glUniform1i(uniTexID, 0);
-				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
-				glDrawArrays(GL_TRIANGLES, model3_start, model3_numVerts); //(Primitive Type, Start Vertex, Num Verticies
+				draw_floor = true;
 			}
 			// draw floor
-			else if (map_type == 'O') {  
-				glm::mat4 model = glm::mat4(1);
-				model = glm::translate(model, glm::vec3(i, 0, j));
-				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
-				//Set which texture to use (0 = wood)
-				glUniform1i(uniTexID, 0);
-				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
-				glDrawArrays(GL_TRIANGLES, model3_start, model3_numVerts); //(Primitive Type, Start Vertex, Num Verticies)
+			else if (map_type == 'O') {
+				draw_floor = true;
 			}
 			// Doors
 			else if (map_type == 'A' || map_type == 'B' || map_type == 'C' || map_type == 'D' || map_type == 'E') {
@@ -701,16 +713,7 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 				glUniform1i(uniTexID, -1);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
-				glDrawArrays(GL_TRIANGLES, model1_start, model1_numVerts); //(Primitive Type, Start Vertex, Num Verticies)
-
-				// draw the floor
-				model = glm::mat4(1);
-				model = glm::translate(model, glm::vec3(i, 0, j));
-				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
-				//Set which texture to use (0 = wood)
-				glUniform1i(uniTexID, 0);
-				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
-				glDrawArrays(GL_TRIANGLES, model3_start, model3_numVerts); //(Primitive Type, Start Vertex, Num Verticies
+				glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]); //(Primitive Type, Start Vertex, Num Verticies
 			}
 			// Keys
 			else if (map_type == 'a' || map_type == 'b' || map_type == 'c' || map_type == 'd' || map_type == 'e') {
@@ -720,10 +723,10 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 				else if (map_type == 'c') SetMaterial(shaderProgram, mat_list, 3);
 				else if (map_type == 'd') SetMaterial(shaderProgram, mat_list, 4);
 				else SetMaterial(shaderProgram, mat_list, 5);
-		
-				
+
+
 				glm::mat4 model = glm::mat4(1);
-				model = glm::translate(model, glm::vec3(i, -0.1 + sin(timePast) * 0.18, j));
+				model = glm::translate(model, glm::vec3(i, sin(timePast) * 0.14, j));
 				model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
 				model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 0.0f));
 				model = glm::rotate(model, -3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -734,18 +737,41 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 				glUniform1i(uniTexID, -1);
 
 				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
-				glDrawArrays(GL_TRIANGLES, model4_start, model4_numVerts); //(Primitive Type, Start Vertex, Num Verticies)
+				glDrawArrays(GL_TRIANGLES, modelStarts[3], modelNumVerts[3]); //(Primitive Type, Start Vertex, Num Verticies)
 
+				draw_floor = true;
 
-				// draw the floor
-				model = glm::mat4(1);
-				model = glm::translate(model, glm::vec3(i, 0, j));
+			}
+			// draw a potion
+			else if (map_type == 'p') {
+				
+				glm::mat4 model = glm::mat4(1);
+				model = glm::translate(model, glm::vec3(i, -0.2 + sin(timePast) * 0.18, j));
+				model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
+				model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 0.0f));
+
+				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
+
+				glUniform1i(uniTexID, -1);
+				SetMaterial(shaderProgram, mat_list, 14);
+
+				glDrawArrays(GL_TRIANGLES, modelStarts[4], modelNumVerts[4]); //(Primitive Type, Start Vertex, Num Verticies)
+
+				draw_floor = true;
+			}
+
+			// draw the floor
+			if (draw_floor) {
+				SetMaterial(shaderProgram, mat_list, 11);
+
+				glm::mat4 model = glm::mat4(1);
+				model = glm::translate(model, glm::vec3(i, -0.55, j));
+				model = glm::scale(model, glm::vec3(0.49999, 0.2, 0.49999));
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 				//Set which texture to use (0 = wood)
-				glUniform1i(uniTexID, 0);
+				glUniform1i(uniTexID, -1);
 				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
-				glDrawArrays(GL_TRIANGLES, model3_start, model3_numVerts); //(Primitive Type, Start Vertex, Num Verticies
-				//printf("done with keys\n");
+				glDrawArrays(GL_TRIANGLES, modelStarts[2], modelNumVerts[2]); //(Primitive Type, Start Vertex, Num Verticies
 			}
 		}
 	}
@@ -760,7 +786,7 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 		glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
 		SetMaterial(shaderProgram, mat_list, 0);
-		glDrawArrays(GL_TRIANGLES, model1_start, model1_numVerts);
+		glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]);
 	}
 
 	// changes due to events
@@ -776,7 +802,7 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 
 		// use key that is
 		glm::mat4 model = glm::mat4(1);
-		model = glm::translate(model, glm::vec3(cam_pos.x + cam_dir.x/2, -0.1, cam_pos.z + cam_dir.z/2));
+		model = glm::translate(model, glm::vec3(cam_pos.x + cam_dir.x / 2, -0.1, cam_pos.z + cam_dir.z / 2));
 		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
 		model = glm::rotate(model, -cam_angle, glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, -3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -785,7 +811,7 @@ void drawGeometry(int shaderProgram, int model1_start, int model1_numVerts, int 
 		//Set which texture to use (-1 = no texture)
 		glUniform1i(uniTexID, -1);
 		//Draw an instance of the model (at the position & orientation specified by the model matrix above)
-		glDrawArrays(GL_TRIANGLES, model4_start, model4_numVerts); //(Primitive Type, Start Vertex, Num Verticies)
+		glDrawArrays(GL_TRIANGLES, modelStarts[3], modelNumVerts[3]);
 	}
 }
 
@@ -998,221 +1024,12 @@ bool isWalkableAndEvents(float newX, float newZ, MapFile map_data) {
 	return true;
 }
 
-// load .obj type models
-float* loadModelOBJwithVT(const char* file_name, int& numLines) {
-	// file_name = "models/key.obj";
-	FILE* fp = fopen(file_name, "r");
-
-	vector<glm::vec3> vertex_arr;
-	vector<glm::vec2> texture_arr;
-	vector<glm::vec3> normal_arr;
-	vector<int> vertex_ind;
-	vector<int> texture_ind;
-	vector<int> normal_ind;
-	int num_tri = 0;
-
-	if (fp == NULL) {
-		printf("Can't open file '%s'\n", file_name);
-		return nullptr;
-	}
-
-	char line[1024];
-	while (fgets(line, 1024, fp)) {
-		if (line[0] == '#') {  // skip commented lines
-			continue;
-		}
-		char command[100];
-		int word_count = sscanf(line, "%s ", command);  // read first word in the line
-		if (word_count < 1) {  // empty line
-			continue;
-		}
-		std::string commandStr = command;
-		if (commandStr == "v") {  // vertex
-			glm::vec3 vertex;
-			sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
-			vertex_arr.push_back(vertex);
-		}
-		else if (commandStr == "vt") {  // vertex texture coordinate
-			glm::vec2 texture;
-			sscanf(line, "vt %f %f", &texture.x, &texture.y);
-			texture_arr.push_back(texture);
-		}
-		else if (commandStr == "vn") {  // vertex normal
-			glm::vec3 normal;
-			sscanf(line, "vn %f %f %f", &normal.x, &normal.y, &normal.z);
-			normal_arr.push_back(normal);
-		}
-		else if (commandStr == "f") {  // triangle face, dictates ordering of vertices...i  think?
-			int v1, vt1, vn1, v2, vt2, vn2, v3, vt3, vn3;
-			sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d", &v1, &vt1, &vn1, &v2, &vt2, &vn2, &v3, &vt3, &vn3);
-			vertex_ind.push_back(v1); texture_ind.push_back(vt1); normal_ind.push_back(vn1);
-			vertex_ind.push_back(v2); texture_ind.push_back(vt2); normal_ind.push_back(vn2);
-			vertex_ind.push_back(v3); texture_ind.push_back(vt3); normal_ind.push_back(vn3);
-			num_tri++;
-		}
-
-	}
-	fclose(fp);
-	numLines = vertex_ind.size() * 8;  // 3 floats for x,y,z of vertex, 2 for u,v texture coordinates, 3 for vertex normal x,y,z
-	float* model1 = new float[numLines];
-
-	//printf("num_tri %d, lines %d, size of vertexInd %d, textureInd %d, normalInd %d\n", num_tri, numLines, vertex_ind.size(), texture_ind.size(), normal_ind.size());
-	//printf("size of vertexArr %d, size of textureArr %d, size of normalArr %d\n", vertex_arr.size(), texture_arr.size(), normal_arr.size());
-	//printf("max index in indexInd %d\n", *max_element(vertex_ind.begin(), vertex_ind.end()));
-	//printf("max index in textureInd %d\n", *max_element(texture_ind.begin(), texture_ind.end()));
-	//printf("max index in normalInd %d\n", *max_element(normal_ind.begin(), normal_ind.end()));
-
-	// for each vertex
-	for (int i = 0; i < vertex_ind.size(); i++) {
-		// vertex x,y,z
-		model1[(i * 8)] = vertex_arr[vertex_ind[i] - 1].x;
-		model1[(i * 8) + 1] = vertex_arr[vertex_ind[i] - 1].y;
-		model1[(i * 8) + 2] = vertex_arr[vertex_ind[i] - 1].z;
-		// texture map u,v
-		model1[(i * 8) + 3] = texture_arr[texture_ind[i] - 1].x;
-		model1[(i * 8) + 4] = texture_arr[texture_ind[i] - 1].y;
-		// vertex normal x,y,z
-		model1[(i * 8) + 5] = normal_arr[normal_ind[i] - 1].x;
-		model1[(i * 8) + 6] = normal_arr[normal_ind[i] - 1].y;
-		model1[(i * 8) + 7] = normal_arr[normal_ind[i] - 1].z;
-	}
-	printf("nice, successful obj loaded\n");
-	return model1;
-}
-
-// load .obj type models
-float* loadModelOBJnoVTwithSquares(const char* file_name, int& numLines) {
-	// file_name = "models/key.obj";
-	// Using the OBJ models from Stephen Guy (https://drive.google.com/drive/u/0/folders/1aRQUoDFDjEUdB-7Ol0cz9Bftv-kCkog-)
-	// it appears that these OBJ models use square faces and not triangles. 
-	// Therefor, I will need to check if the faces are set as triangle or squares, and 
-	// if they are squares I need to convert it to two separate triangles
-	FILE* fp = fopen(file_name, "r");
-
-	vector<glm::vec3> vertex_arr;
-	vector<glm::vec3> normal_arr;
-	vector<int> vertex_ind;
-	vector<int> normal_ind;
-	int num_tri = 0;
-
-	if (fp == NULL) {
-		printf("Can't open file '%s'\n", file_name);
-		return nullptr;
-	}
-	bool is_square = false;
-	char line[1024];
-	while (fgets(line, 1024, fp)) {
-		if (line[0] == '#') {  // skip commented lines
-			continue;
-		}
-		char command[100];
-		int word_count = sscanf(line, "%s ", command);  // read first word in the line
-		if (word_count < 1) {  // empty line
-			continue;
-		}
-		std::string commandStr = command;
-		if (commandStr == "v") {  // vertex
-			glm::vec3 vertex;
-			sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
-			vertex_arr.push_back(vertex);
-		}
-		else if (commandStr == "vn") {  // vertex normal
-			glm::vec3 normal;
-			sscanf(line, "vn %f %f %f", &normal.x, &normal.y, &normal.z);
-			normal_arr.push_back(normal);
-		}
-		else if (commandStr == "f") {  // triangle face, dictates ordering of vertices...i  think?
-			int v1, vn1, v2, vn2, v3, vn3;
-			int v4 = -1;
-			int vn4 = -1;
-			sscanf(line, "f %d//%d %d//%d %d//%d %d//%d", &v1, &vn1, &v2, &vn2, &v3, &vn3, &v4, &vn4);
-			if ( !(v4 == -1 && vn4 == -1) && is_square == false) {  // if vertex 4 is not -1, then we are using squares
-				is_square = true;
-			}
-			vertex_ind.push_back(v1); normal_ind.push_back(vn1);
-			vertex_ind.push_back(v2); normal_ind.push_back(vn2);
-			vertex_ind.push_back(v3); normal_ind.push_back(vn3);
-			num_tri++;
-			if (is_square) {  // add second triangle
-				vertex_ind.push_back(v1); normal_ind.push_back(vn1);
-				vertex_ind.push_back(v3); normal_ind.push_back(vn3);
-				vertex_ind.push_back(v4); normal_ind.push_back(vn4);
-				num_tri++;
-			}
-			
-		}
-
-	}
-	fclose(fp);
-	numLines = vertex_ind.size() * 8;  // 3 floats for x,y,z of vertex, 2 for u,v texture coordinates, 3 for vertex normal x,y,z
-	float* model1 = new float[numLines];
-
-	//printf("num_tri %d, lines %d, size of vertexInd %d, textureInd %d, normalInd %d\n", num_tri, numLines, vertex_ind.size(), texture_ind.size(), normal_ind.size());
-	//printf("size of vertexArr %d, size of textureArr %d, size of normalArr %d\n", vertex_arr.size(), texture_arr.size(), normal_arr.size());
-	//printf("max index in indexInd %d\n", *max_element(vertex_ind.begin(), vertex_ind.end()));
-	//printf("max index in textureInd %d\n", *max_element(texture_ind.begin(), texture_ind.end()));
-	//printf("max index in normalInd %d\n", *max_element(normal_ind.begin(), normal_ind.end()));
-
-	// for each vertex
-	//if (is_square) {
-	//	// separate each square into two triangles
-	//	for (int i = 0; i < vertex_ind.size(); i++) {
-	//		// triangle 1
-	//		i = i * 2;  // stride 2 to account for 2 triangles
-	//		// vertex x,y,z
-	//		model1[(i * 8)] = vertex_arr[vertex_ind[i] - 1].x;
-	//		model1[(i * 8) + 1] = vertex_arr[vertex_ind[i] - 1].y;
-	//		model1[(i * 8) + 2] = vertex_arr[vertex_ind[i] - 1].z;
-	//		// texture map u,v
-	//		model1[(i * 8) + 3] = 0;
-	//		model1[(i * 8) + 4] = 0;
-	//		// vertex normal x,y,z
-	//		model1[(i * 8) + 5] = normal_arr[normal_ind[i] - 1].x;
-	//		model1[(i * 8) + 6] = normal_arr[normal_ind[i] - 1].y;
-	//		model1[(i * 8) + 7] = normal_arr[normal_ind[i] - 1].z;
-
-	//		// triangle 2
-	//		// vertex x,y,z
-	//		i = i + 1;  // offset by 1
-	//		model1[(i * 8)] = vertex_arr[vertex_ind[i] - 1].x;
-	//		model1[(i * 8) + 1] = vertex_arr[vertex_ind[i] - 1].y;
-	//		model1[(i * 8) + 2] = vertex_arr[vertex_ind[i] - 1].z;
-	//		// texture map u,v
-	//		model1[(i * 8) + 3] = 0;
-	//		model1[(i * 8) + 4] = 0;
-	//		// vertex normal x,y,z
-	//		model1[(i * 8) + 5] = normal_arr[normal_ind[i] - 1].x;
-	//		model1[(i * 8) + 6] = normal_arr[normal_ind[i] - 1].y;
-	//		model1[(i * 8) + 7] = normal_arr[normal_ind[i] - 1].z;
-	//	}
-	//}
-
-	for (int i = 0; i < vertex_ind.size(); i++) {
-		// vertex x,y,z
-		model1[(i * 8)] = vertex_arr[vertex_ind[i] - 1].x;
-		model1[(i * 8) + 1] = vertex_arr[vertex_ind[i] - 1].y;
-		model1[(i * 8) + 2] = vertex_arr[vertex_ind[i] - 1].z;
-		// texture map u,v
-		model1[(i * 8) + 3] = 0;
-		model1[(i * 8) + 4] = 0;
-		// vertex normal x,y,z
-		model1[(i * 8) + 5] = normal_arr[normal_ind[i] - 1].x;
-		model1[(i * 8) + 6] = normal_arr[normal_ind[i] - 1].y;
-		model1[(i * 8) + 7] = normal_arr[normal_ind[i] - 1].z;
-	}
-
-
-	printf("nice, successful obj loaded\n");
-	return model1;
-}
-
 void loadModelMTL(const char* file_name, vector<Material>& mat_list) {
 	FILE* fp = fopen(file_name, "r");
 	if (fp == NULL) {
 		perror("Can't open file");
 	}
-	Material mat = Material();
-
+	Material mat;
 	char line[1024];
 	while (fgets(line, 1024, fp)) {
 		if (line[0] == '#') {  // skip commented lines
@@ -1223,12 +1040,13 @@ void loadModelMTL(const char* file_name, vector<Material>& mat_list) {
 		if (word_count < 1) {  // empty line
 			continue;
 		}
-		
+
 		std::string commandStr = command;
-		if (commandStr == "newmtl") {
+		if (commandStr == "newmtl") {  // beginning of new material
+			mat = Material();  // so reset mat to a new Material. It will populate below a
 			char newmtl[20];
 			sscanf(line, "newmtl %s", newmtl);
-			mat.newmtl == newmtl;
+			strcpy(mat.newmtl, newmtl);
 		}
 		else if (commandStr == "Ns") {
 			float ns = -1.0;
@@ -1239,7 +1057,7 @@ void loadModelMTL(const char* file_name, vector<Material>& mat_list) {
 			//glm::vec3 vertex;
 			//sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
 			//vertex_arr.push_back(vertex);
-			glm::vec3 Ka = glm::vec3(-1.0,-1.0,-1.0);
+			glm::vec3 Ka = glm::vec3(-1.0, -1.0, -1.0);
 			sscanf(line, "Ka %f %f %f", &Ka.x, &Ka.y, &Ka.z);
 			mat.Ka = Ka;
 		}
@@ -1258,9 +1076,11 @@ void loadModelMTL(const char* file_name, vector<Material>& mat_list) {
 			sscanf(line, "Ke %f %f %f", &Ke.x, &Ke.y, &Ke.z);
 			mat.Ke = Ke;
 		}
+		else if (commandStr == "illum") {  // this is the last item in a material, so add material to list
+			mat_list.push_back(mat);
+		}
 	}
 	fclose(fp);
-	mat_list.push_back(mat);
 }
 
 // check how to, or if, to drop the key
@@ -1406,4 +1226,136 @@ void SetLights(int shaderProgram, PointLights point_lights) {
 
 	GLint uniColor = glGetUniformLocation(shaderProgram, "inPointLightsCOLOR");
 	glUniform3fv(uniColor, point_lights.size, glm::value_ptr(point_lights.color[0]));
+}
+
+// load .obj type models
+float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* file_nameMTL, vector<Material>& mat_list) {
+	// load materials
+	loadModelMTL(file_nameMTL, mat_list);
+
+	// Using the OBJ models from Stephen Guy (https://drive.google.com/drive/u/0/folders/1aRQUoDFDjEUdB-7Ol0cz9Bftv-kCkog-)
+	// it appears that these OBJ models use square faces and not triangles. 
+	// Therefor, I went into blender and converted all faces into triangles
+	FILE* fp = fopen(file_nameOBJ, "r");
+
+	vector<glm::vec3> vertex_arr;
+	vector<glm::vec2> texture_arr;
+	vector<glm::vec3> normal_arr;
+	vector<int> vertex_ind;
+	vector<int> texture_ind;
+	vector<int> normal_ind;
+	vector<int> material_ind;
+	int num_tri = 0;
+
+	if (fp == NULL) {
+		printf("Can't open file '%s'\n", file_nameOBJ);
+		return nullptr;
+	}
+	bool has_vt = false;
+	char line[1024];
+	int curr_mat_ind = 0;
+	while (fgets(line, 1024, fp)) {
+		if (line[0] == '#') {  // skip commented lines
+			continue;
+		}
+		char command[100];
+		int word_count = sscanf(line, "%s ", command);  // read first word in the line
+		if (word_count < 1) {  // empty line
+			continue;
+		}
+		string commandStr = command;
+		if (commandStr == "v") {  // vertex
+			glm::vec3 vertex;
+			sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
+			vertex_arr.push_back(vertex);
+		}
+		else if (commandStr == "vt") {  // vertex texture coordinate
+			if (!has_vt) {
+				has_vt = true;
+			}
+			glm::vec2 texture;
+			sscanf(line, "vt %f %f", &texture.x, &texture.y);
+			texture_arr.push_back(texture);
+		}
+		else if (commandStr == "vn") {  // vertex normal
+			glm::vec3 normal;
+			sscanf(line, "vn %f %f %f", &normal.x, &normal.y, &normal.z);
+			normal_arr.push_back(normal);
+		}
+		else if (commandStr == "f") {  // triangle face
+			if (has_vt) {
+				int v1, vt1, vn1, v2, vt2, vn2, v3, vt3, vn3;
+				sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d", &v1, &vt1, &vn1, &v2, &vt2, &vn2, &v3, &vt3, &vn3);
+				vertex_ind.push_back(v1); texture_ind.push_back(vt1); normal_ind.push_back(vn1); material_ind.push_back(curr_mat_ind);
+				vertex_ind.push_back(v2); texture_ind.push_back(vt2); normal_ind.push_back(vn2); material_ind.push_back(curr_mat_ind);
+				vertex_ind.push_back(v3); texture_ind.push_back(vt3); normal_ind.push_back(vn3); material_ind.push_back(curr_mat_ind);
+
+			}
+			else {
+				int v1, vn1, v2, vn2, v3, vn3;
+				sscanf(line, "f %d//%d %d//%d %d//%d", &v1, &vn1, &v2, &vn2, &v3, &vn3);
+				vertex_ind.push_back(v1); normal_ind.push_back(vn1); material_ind.push_back(curr_mat_ind);
+				vertex_ind.push_back(v2); normal_ind.push_back(vn2); material_ind.push_back(curr_mat_ind);
+				vertex_ind.push_back(v3); normal_ind.push_back(vn3); material_ind.push_back(curr_mat_ind);
+			}
+			num_tri++;
+		}
+		else if (commandStr == "usemtl") {
+			char mtl[20];
+			sscanf(line, "usemtl %s", mtl);
+			// find material properties and use that too in VAO/VBO TODO
+			for (int i = 0; i < mat_list.size(); i++) {
+				if (strcmp(mat_list[i].newmtl, mtl) == 0) {
+					curr_mat_ind = i;
+					//cout << i << endl;
+					//mat_list[i].debug();
+				}
+			}
+		}
+	}
+
+	fclose(fp);
+
+	const int n = 8;
+	numLines = vertex_ind.size() * n;  // 3 floats for x,y,z of vertex, 2 for u,v texture coordinates, 3 for vertex normal x,y,z, 1 mat index
+	float* model1 = new float[numLines];
+
+	//printf("num_tri %d, lines %d, size of vertexInd %d, textureInd %d, normalInd %d, materialInd %d\n", num_tri, numLines, vertex_ind.size(), texture_ind.size(), normal_ind.size(), material_ind.size());
+	//printf("size of vertexArr %d, size of textureArr %d, size of normalArr %d\n", vertex_arr.size(), texture_arr.size(), normal_arr.size());
+	//
+	//cout << endl;
+	//for (int i = 0; i < material_ind.size(); i++) {
+	//	int j;
+	//	for (j = 0; j < i; j++)
+	//		if (material_ind[i] == material_ind[j])
+	//			break;
+	//	if (i == j)
+	//		cout << material_ind[i] << " ";
+	//}
+	//cout << endl;
+	
+	for (int i = 0; i < vertex_ind.size(); i++) {
+		// vertex x,y,z
+		model1[(i * n)] = vertex_arr[vertex_ind[i] - 1].x;
+		model1[(i * n) + 1] = vertex_arr[vertex_ind[i] - 1].y;
+		model1[(i * n) + 2] = vertex_arr[vertex_ind[i] - 1].z;
+		// texture map u,v
+		if (has_vt) {
+			model1[(i * n) + 3] = texture_arr[texture_ind[i] - 1].x;
+			model1[(i * n) + 4] = texture_arr[texture_ind[i] - 1].y;
+		}
+		else {
+			model1[(i * n) + 3] = 0;
+			model1[(i * n) + 4] = 0;
+		}
+		// vertex normal x,y,z
+		model1[(i * n) + 5] = normal_arr[normal_ind[i] - 1].x;
+		model1[(i * n) + 6] = normal_arr[normal_ind[i] - 1].y;
+		model1[(i * n) + 7] = normal_arr[normal_ind[i] - 1].z;
+		// material index
+		//model1[(i * 9) + 8] = material_ind[i];
+	}
+
+	printf("nice, successful obj loaded\n");
+	return model1;
 }
