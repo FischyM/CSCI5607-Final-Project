@@ -454,7 +454,7 @@ int main(int argc, char* argv[]) {
 				fullscreen = !fullscreen;
 				SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Toggle fullscreen 
 			}
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE && inAir == false) { // if "space" is pressed and character is not in air (character on ground)
+			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_SPACE && inAir == false) { // if "space" is pressed and character is not in air (character on ground)
 				jumpStartTime = SDL_GetTicks() / 1000.f;
 				//printf("jump start time is %f\n", jumpStartTime);
 				inAir = true;
@@ -802,9 +802,9 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 		// use key that is
 		glm::mat4 model = glm::mat4(1);
-		model = glm::translate(model, glm::vec3(cam_pos.x + cam_dir.x / 2, -0.1, cam_pos.z + cam_dir.z / 2));
+		model = glm::translate(model, glm::vec3(cam_pos.x + cam_dir.x / 2, -0.1+cam_pos.y, cam_pos.z + cam_dir.z / 2));
 		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
-		model = glm::rotate(model, -cam_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, -cam_angle+ 3.14f / 4, glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, -3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
 
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
