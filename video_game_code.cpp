@@ -207,7 +207,7 @@ int main(int argc, char* argv[]) {
 	const int n = 8;
 	//Load Model 1 - cube
 	ifstream modelFile;
-	modelFile.open("models/cube-copy.txt");
+	modelFile.open("models/cube.txt");
 	//test
 	if (!modelFile.is_open()) {
 		printf("cube not open\n");
