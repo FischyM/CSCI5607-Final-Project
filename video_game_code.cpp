@@ -43,17 +43,50 @@ Press Esc to exit the game.\n";
 #include <algorithm>
 using namespace std;
 
+
+GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName);
+bool DEBUG_ON = true;
+bool fullscreen = false;
 int screenWidth = 800;
 int screenHeight = 600;
+// mouse motion variables
+static int xpos = screenWidth / 2; // = 400 to center the cursor in the window
+static int ypos = screenHeight / 2; // = 300 to center the cursor in the window
+
+
+
+//Game parameters
 float timePast = 0;
 float dt = 0;
 bool goal_found = false;
-float char_radius = 0.125;
+char activeKey = '0';
 
-// srand(time(NULL));
-float rand01() {
-	return rand() / (float)RAND_MAX;
-}
+//Character parameters
+int accel = 1;
+float char_radius = 0.125;
+float slowFactor = 0.75;
+float human_Base_Hight = 0; //human hight
+
+
+//Hulk parameters
+bool hulkMode = false;
+float hulkBaseH = 0.7; //hulk hight
+float hulkStartTime = 0;
+float hulkGrowTime = 1; //animation for grow up
+float hulkShrinkTime = 1; //animation for Shrink
+float hulkMaintainTime = 20; //after 20seconds hulk mode off.
+int hulkPotionPosIndex = 0; //replace potion if hulk mode off
+
+							
+//jump feature parameters
+float jumpStartTime = 0;
+float MaxInAirTime = 0.8; //Leave ground to back to ground, total 0.8 second.
+float HalfMaxInAirTime = MaxInAirTime / 2;
+float jumpMaxHight = 1;
+float jumpHight = 0;
+bool inAir = false;
+
+
 
 // door:key colors
 glm::vec3 colorA(0.0f, 1.0f, 0.2f);
@@ -69,11 +102,8 @@ glm::vec3 cam_up = glm::vec3(0.0f, 1.0f, 0.0f);  // Up
 float cam_angle = glm::atan(cam_dir.z, cam_dir.x);
 float cam_speed = 2.0f;
 
-char activeKey = '0';
 
-bool DEBUG_ON = true;
-GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName);
-bool fullscreen = false;
+
 
 struct Material {
 	char newmtl[20];
@@ -119,6 +149,12 @@ struct MapFile {
 map <char, bool> doorOpen = { {'A',false}, {'B',false}, {'C',false}, {'D',false}, {'E',false} };
 map <char, char> doorToKey = { {'A','a'},   {'B','b'},   {'C','c'},   {'D','d'},   {'E','e'} };
 
+
+// srand(time(NULL));
+float rand01() {
+	return rand() / (float)RAND_MAX;
+}
+
 void setCamDirFromAngle(float cam_angle) {
 	cam_dir.z = glm::sin(cam_angle);
 	cam_dir.x = glm::cos(cam_angle);
@@ -163,6 +199,8 @@ void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind);
 
 void SetLights(int shaderProgram, PointLights point_lights);
 
+void setCameraHight(float time, MapFile& map_data);
+
 int main(int argc, char* argv[]) {
 	SDL_Init(SDL_INIT_VIDEO);  //Initialize Graphics (for OpenGL)
 
@@ -192,7 +230,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-
+	//******************************************************************* Load Models *****************************************************//* 
 
 	// light emmitting material - 0
 	loadModelMTL("models/light.mtl", mat_list);
@@ -203,7 +241,6 @@ int main(int argc, char* argv[]) {
 	loadModelMTL("models/key3.mtl", mat_list);
 	loadModelMTL("models/key4.mtl", mat_list);
 	loadModelMTL("models/key5.mtl", mat_list);
-
 
 
 	//Here we will load three different model files 
@@ -306,6 +343,10 @@ int main(int argc, char* argv[]) {
 	vector<int> modelStarts = { startVertCube, startVertSword, startVertFloor, startVertKey, startPotion, startWall, startSphere, startCloud };
 
 
+
+	//******************************************************************* Load Textures *****************************************************//* 
+
+
 	//// Allocate Texture 0 (Wood) ///////
 	SDL_Surface* surface = SDL_LoadBMP("textures/wood.bmp");
 
@@ -358,6 +399,7 @@ int main(int argc, char* argv[]) {
 	//// End Allocate Texture ///////
 
 
+	//******************************************************************* Shaders *****************************************************//* 
 
 
 
@@ -406,10 +448,14 @@ int main(int argc, char* argv[]) {
 	printf("%s\n", INSTRUCTIONS);
 
 
+	//******************************************************************* Maps  *****************************************************//* 
+
 	// get the map file data
 	MapFile map_data = MapFile();
 	loadMapFile("maps/complicated.txt", map_data);  // test_with_doors complicated
 
+
+	//******************************************************************* lights source  *****************************************************//* 
 
 
 	// set up the moon
@@ -434,6 +480,9 @@ int main(int argc, char* argv[]) {
 	point_lights.debug();
 
 
+	//******************************************************************* Events  *****************************************************//* 
+
+
 
 	//Event Loop (Loop forever processing each event as fast as possible)
 	SDL_Event windowEvent;
@@ -445,23 +494,6 @@ int main(int argc, char* argv[]) {
 	bool is_d = false;
 	bool is_q = false;
 	bool is_e = false;
-
-	//movement
-	int accel = 1;
-	float slowFactor = 0.75;
-
-	// mouse motion variables
-	static int xpos = screenWidth / 2; // = 400 to center the cursor in the window
-	static int ypos = screenHeight / 2; // = 300 to center the cursor in the window
-
-	//jump feature
-	float jumpStartTime = SDL_GetTicks() / 1000.f;
-	//printf("jump start time is %f\n", jumpStartTime);
-	float MaxInAirTime = 0.8; //Leave ground to back to ground, total 1 second.
-	float HalfMaxInAirTime = MaxInAirTime / 2;
-	float jumpMaxHight = 1;
-	float jumpHight = 0;
-	bool inAir = false;
 
 
 
@@ -499,8 +531,9 @@ int main(int argc, char* argv[]) {
 
 
 			// check for acceleration modifier
-			if (state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT]) accel = 3;
-			else accel = 1;
+			if (state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT]) { accel = 3; }
+			else if (hulkMode) { accel = 2; }
+			else { accel = 1; }
 
 			// if movement keys are pressed
 			if (windowEvent.type == SDL_KEYDOWN) {
@@ -525,14 +558,10 @@ int main(int argc, char* argv[]) {
 			//If mouse motion event happened
 			if (windowEvent.type == SDL_MOUSEMOTION)
 			{
-				//Get mouse position
 				xpos += windowEvent.motion.xrel;
 				ypos += windowEvent.motion.yrel;
-				//printf("Mouse x= %d\n", xpos);
-				//printf("Mouse y= %d\n", ypos);
 
 			}
-
 		}
 
 		float v_x = 0.0;
@@ -592,31 +621,16 @@ int main(int argc, char* argv[]) {
 		dt = time - timePast;
 		timePast = time;
 
-		//change camera postion if character is inAir (jump)
-		float jumpPassTime = time - jumpStartTime;
-		if (jumpPassTime >= MaxInAirTime) {
-			inAir = false;
-			cam_pos.y = 0;
-		}
-		else {
-			float tempX = 0;
-			if (jumpPassTime < HalfMaxInAirTime) {
-				tempX = jumpPassTime;
-			}
-			else {
-				tempX = MaxInAirTime - jumpPassTime;
-			}
-			jumpHight = jumpMaxHight * tempX / HalfMaxInAirTime;
-			cam_pos.y = jumpHight;
-		}
+		
+		//jump or hulk mode will change the camera hight
+		setCameraHight(time, map_data);
 
 
-
-		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);  // TODO is this the issue?
+		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);  // TODO is this the issue?  //Fan: what issue?
 
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-		glm::mat4 proj = glm::perspective(3.14f / 4, screenWidth / (float)screenHeight, 0.1f, 500.0f); //FOV, aspect, near, far
+		glm::mat4 proj = glm::perspective(3.14f / 4, screenWidth / (float)screenHeight, 0.1f, 100.0f); //FOV, aspect, near, far
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
 
@@ -651,7 +665,49 @@ int main(int argc, char* argv[]) {
 	SDL_GL_DeleteContext(context);
 	SDL_Quit();
 	return 0;
-} 
+}
+
+//hulk mode or jump will change camera hight, cam_pos.y value
+void setCameraHight(float time, MapFile& map_data)
+{
+	// change camera postion if character is in hulkmode
+	float baseH = human_Base_Hight;
+	if (hulkMode == true) {
+		float hulkPassTime = time - hulkStartTime;
+
+		if (hulkPassTime < hulkGrowTime) {
+			baseH = hulkPassTime * hulkBaseH / hulkGrowTime;
+		}
+		else if (hulkPassTime < hulkMaintainTime) {
+			baseH = hulkBaseH;
+		}
+		else if (hulkPassTime < hulkMaintainTime + hulkShrinkTime) {
+			baseH = hulkBaseH * (hulkMaintainTime + hulkShrinkTime - hulkPassTime) / hulkShrinkTime;
+		}
+		else {
+			hulkMode == false;
+			map_data.data[hulkPotionPosIndex] = 'p';
+		}
+	}
+	//change camera postion if character is inAir (jump)
+	float jumpPassTime = time - jumpStartTime;
+	if (jumpPassTime >= MaxInAirTime) {
+		inAir = false;
+		cam_pos.y = baseH;
+	}
+	else {
+		float tempX = 0;
+		if (jumpPassTime < HalfMaxInAirTime) {
+			tempX = jumpPassTime;
+		}
+		else {
+			tempX = MaxInAirTime - jumpPassTime;
+		}
+		jumpHight = jumpMaxHight * tempX / HalfMaxInAirTime;
+		cam_pos.y = baseH + jumpHight;
+	}
+}
+
 
 // all rendering code goes here
 void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> modelStarts, MapFile map_data) {
@@ -1079,6 +1135,15 @@ bool isWalkableAndEvents(float newX, float newZ, MapFile map_data) {
 				// TODO: add in something fancy here
 				if (verbose) printf("goal w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
 				goal_found = true;
+				return true;
+			}
+			// hulk potion
+			if (map_tile == 'p') {
+				if (verbose) printf("potion w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
+				hulkMode = true;
+				hulkStartTime = SDL_GetTicks() / 1000.f;
+				map_data.data[ind] = 'O';
+				hulkPotionPosIndex = ind;
 				return true;
 			}
 		}
