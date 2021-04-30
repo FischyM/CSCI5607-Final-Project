@@ -1,11 +1,5 @@
 #version 150 core
 
-
-in vec3 vertNormal;
-in vec3 pos;
-in vec2 texcoord;
-in int matIndex;
-
 struct Material {
 	float Ns;  // phong specularity exponent
 	vec3 Ka;  // ambient light
@@ -13,6 +7,11 @@ struct Material {
 	vec3 Ks;  // specular light
   vec3 Ke;  // emissive light
 };
+
+in vec3 vertNormal;
+in vec3 pos;
+in vec2 texcoord;
+in int matIndex;
 
 uniform Material mat;  // TODO: will need to remove this as well as in drawGeometry
 

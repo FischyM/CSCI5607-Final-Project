@@ -152,13 +152,15 @@ bool isWalkableAndEvents(float newX, float newZ, MapFile map_data);
 
 void wallSlide(float newX, float newZ, MapFile map_data);
 
-float* loadModelOBJwithMTL(const char* file_name, int& numLines, const char* file_nameMTL, vector<Material>& mat_list);
+float* loadModelOBJwithMTL(const char* file_name, int& numLines, const char* file_nameMTL, vector<Material>& mat_list, bool verbose);
 
 void loadModelMTL(const char* file_name, vector<Material>& mat_list);
 
-void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind);
+void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind, int doSet);
 
 void SetLights(int shaderProgram, PointLights point_lights);
+
+void SendMaterialsToShader(int shaderProgram, vector<Material> mat_list);
 
 int main(int argc, char* argv[]) {
 	SDL_Init(SDL_INIT_VIDEO);  //Initialize Graphics (for OpenGL)
@@ -204,10 +206,10 @@ int main(int argc, char* argv[]) {
 
 
 	//Here we will load three different model files 
-	const int n = 8;
+	const int n = 9;
 	//Load Model 1 - cube
 	ifstream modelFile;
-	modelFile.open("models/cube.txt");
+	modelFile.open("models/cube-with-material-index.txt");
 	//test
 	if (!modelFile.is_open()) {
 		printf("cube not open\n");
@@ -224,31 +226,31 @@ int main(int argc, char* argv[]) {
 
 	//Load Model 2 - sword
 	numLines = 0;
-	float* modelSword = loadModelOBJwithMTL("models/sword-tri.obj", numLines, "models/sword-tri.mtl", mat_list);
+	float* modelSword = loadModelOBJwithMTL("models/sword-tri.obj", numLines, "models/sword-tri.mtl", mat_list, false);
 	int numVertsSword = numLines / n;
 	printf("%d, %d\n", numLines, numVertsSword);
 
 	//Load Model 3 - floor
 	numLines = 0;
-	float* modelFloor = loadModelOBJwithMTL("models/ModularFloor-tri.obj", numLines, "models/ModularFloor-tri.mtl", mat_list);
+	float* modelFloor = loadModelOBJwithMTL("models/ModularFloor-tri.obj", numLines, "models/ModularFloor-tri.mtl", mat_list, false);
 	int numVertsFloor = numLines / n;
 	printf("%d, %d\n", numLines, numVertsFloor);
 
 	// load model 4 - key and it's material
 	numLines = 0;
-	float* modelKey1 = loadModelOBJwithMTL("models/key1-tri.obj", numLines, "models/key1-tri.mtl", mat_list);
+	float* modelKey1 = loadModelOBJwithMTL("models/key1-tri.obj", numLines, "models/key1-tri.mtl", mat_list, false);
 	int numVertsKey1 = numLines / n;
 	printf("%d, %d\n", numLines, numVertsKey1);
 
 	// load model 5 - potion and it's material
 	numLines = 0;
-	float* modelPotion = loadModelOBJwithMTL("models/potion-tri.obj", numLines, "models/potion-tri.mtl", mat_list);
+	float* modelPotion = loadModelOBJwithMTL("models/potion-tri.obj", numLines, "models/potion-tri.mtl", mat_list, false);
 	int numVertsPotion = numLines / n;
 	printf("%d, %d\n", numLines, numVertsPotion);
 
 	// load model 6 - crumbling wall
 	numLines = 0;
-	float* modelWall = loadModelOBJwithMTL("models/wall-broken.obj", numLines, "models/wall-broken.mtl", mat_list);
+	float* modelWall = loadModelOBJwithMTL("models/wall-broken-tri.obj", numLines, "models/wall-broken-tri.mtl", mat_list, true);
 	int numVertsWall = numLines / n;
 	printf("%d, %d\n", numLines, numVertsWall);
 
@@ -351,23 +353,23 @@ int main(int argc, char* argv[]) {
 
 	int texturedShader = InitShader("shaders/textured-Vertex.glsl", "shaders/textured-Fragment.glsl");
 
-	//Tell OpenGL how to set fragment shader input 
+	//Tell OpenGL how to set fragment shader input
 	GLint posAttrib = glGetAttribLocation(texturedShader, "position");
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, n * sizeof(float), 0);
 	//Attribute, vals/attrib., type, isNormalized, stride, offset
 	glEnableVertexAttribArray(posAttrib);
 
-	//GLint colAttrib = glGetAttribLocation(texturedShader, "inColor");
-	//glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3*sizeof(float)));
-	//glEnableVertexAttribArray(colAttrib);
+	GLint texAttrib = glGetAttribLocation(texturedShader, "inTexcoord");
+	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, n * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(texAttrib);
 
 	GLint normAttrib = glGetAttribLocation(texturedShader, "inNormal");
-	glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+	glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, n * sizeof(float), (void*)(5 * sizeof(float)));
 	glEnableVertexAttribArray(normAttrib);
 
-	GLint texAttrib = glGetAttribLocation(texturedShader, "inTexcoord");
-	glEnableVertexAttribArray(texAttrib);
-	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	GLint matAttrib = glGetAttribLocation(texturedShader, "inMatIndex");
+	glVertexAttribPointer(matAttrib, 1, GL_FLOAT, GL_FALSE, n * sizeof(float), (void*)(8 * sizeof(float)));
+	glEnableVertexAttribArray(matAttrib);
 
 	GLint uniView = glGetUniformLocation(texturedShader, "view");
 	GLint uniProj = glGetUniformLocation(texturedShader, "proj");
@@ -388,7 +390,7 @@ int main(int argc, char* argv[]) {
 	int count = 0;
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
-			point_lights.pos[count] = glm::vec3(3 + i * 10, 1, 3 + j * 10);  // remember, y is up
+			point_lights.pos[count] = glm::vec3(3 + i * 10, 2, 3 + j * 10);  // remember, y is up
 			point_lights.color[count] = glm::vec3(10, 10, 10);
 			count++;
 		}
@@ -428,11 +430,11 @@ int main(int argc, char* argv[]) {
 
 
 	
-	for (int i = 0; i < mat_list.size(); i++) {
-		cout << i << " ";
-		mat_list[i].debug();
-	}
-	printf("number of materials right now: %d\n", mat_list.size());
+	//for (int i = 0; i < mat_list.size(); i++) {
+	//	cout << i << " ";
+	//	mat_list[i].debug();
+	//}
+	//printf("number of materials right now: %d\n", mat_list.size());
 
 
 	while (!quit) {
@@ -624,6 +626,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	SetLights(shaderProgram, point_lights);
 	//printf("after SetLight\n");
 
+	SendMaterialsToShader(shaderProgram, mat_list);
 
 	static bool cam_start = true;
 	//************
@@ -647,7 +650,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				model = glm::translate(model, glm::vec3(i, 0, j));
 				model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 				model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-
+				SetMaterial(shaderProgram, mat_list, 0, 0);
 				//Set which texture to use (1 = brick texture ... bound to GL_TEXTURE1)
 				glUniform1i(uniTexID, 1);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -660,7 +663,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				glm::mat4 model = glm::mat4(1);
 				model = glm::translate(model, glm::vec3(i, 0, j));
 				model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-				SetMaterial(shaderProgram, mat_list, 16);
+				SetMaterial(shaderProgram, mat_list, 5, 1);
 
 				glUniform1i(uniTexID, -1);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -681,8 +684,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				model = glm::translate(model, glm::vec3(i, sin(timePast) * 0.14, j));
 				model = glm::scale(model, glm::vec3(.11f));
 				model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 0.0f));
-				
-				SetMaterial(shaderProgram, mat_list, 16);
+				SetMaterial(shaderProgram, mat_list, 0, 0);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 
 				//Set which texture to use (-1 = no texture)
@@ -699,11 +701,11 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 			// Doors
 			else if (map_type == 'A' || map_type == 'B' || map_type == 'C' || map_type == 'D' || map_type == 'E') {
 				// set color
-				if (map_type == 'A') SetMaterial(shaderProgram, mat_list, 1);
-				else if (map_type == 'B') SetMaterial(shaderProgram, mat_list, 2);
-				else if (map_type == 'C') SetMaterial(shaderProgram, mat_list, 3);
-				else if (map_type == 'D') SetMaterial(shaderProgram, mat_list, 4);
-				else SetMaterial(shaderProgram, mat_list, 5);
+				if (map_type == 'A') SetMaterial(shaderProgram, mat_list, 1, 1);
+				else if (map_type == 'B') SetMaterial(shaderProgram, mat_list, 2, 1);
+				else if (map_type == 'C') SetMaterial(shaderProgram, mat_list, 3, 1);
+				else if (map_type == 'D') SetMaterial(shaderProgram, mat_list, 4, 1);
+				else SetMaterial(shaderProgram, mat_list, 5, 1);
 
 
 				glm::mat4 model = glm::mat4(1);
@@ -718,11 +720,11 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 			// Keys
 			else if (map_type == 'a' || map_type == 'b' || map_type == 'c' || map_type == 'd' || map_type == 'e') {
 				// set color
-				if (map_type == 'a') SetMaterial(shaderProgram, mat_list, 1);
-				else if (map_type == 'b') SetMaterial(shaderProgram, mat_list, 2);
-				else if (map_type == 'c') SetMaterial(shaderProgram, mat_list, 3);
-				else if (map_type == 'd') SetMaterial(shaderProgram, mat_list, 4);
-				else SetMaterial(shaderProgram, mat_list, 5);
+				if (map_type == 'a') SetMaterial(shaderProgram, mat_list, 1, 1);
+				else if (map_type == 'b') SetMaterial(shaderProgram, mat_list, 2, 1);
+				else if (map_type == 'c') SetMaterial(shaderProgram, mat_list, 3, 1);
+				else if (map_type == 'd') SetMaterial(shaderProgram, mat_list, 4, 1);
+				else SetMaterial(shaderProgram, mat_list, 5, 1);
 
 
 				glm::mat4 model = glm::mat4(1);
@@ -751,9 +753,8 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 0.0f));
 
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
-
+				SetMaterial(shaderProgram, mat_list, 0, 0);
 				glUniform1i(uniTexID, -1);
-				SetMaterial(shaderProgram, mat_list, 14);
 
 				glDrawArrays(GL_TRIANGLES, modelStarts[4], modelNumVerts[4]); //(Primitive Type, Start Vertex, Num Verticies)
 
@@ -762,8 +763,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 			// draw the floor
 			if (draw_floor) {
-				SetMaterial(shaderProgram, mat_list, 11);
-
+				SetMaterial(shaderProgram, mat_list, 0, 0);
 				glm::mat4 model = glm::mat4(1);
 				model = glm::translate(model, glm::vec3(i, -0.55, j));
 				model = glm::scale(model, glm::vec3(0.49999, 0.2, 0.49999));
@@ -785,7 +785,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 		glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
-		SetMaterial(shaderProgram, mat_list, 0);
+		SetMaterial(shaderProgram, mat_list, 0, 1);
 		glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]);
 	}
 
@@ -793,11 +793,11 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	// render inventoried key
 	if (activeKey != '0') {
 		// set color
-		if (activeKey == 'a') SetMaterial(shaderProgram, mat_list, 1);
-		else if (activeKey == 'b') SetMaterial(shaderProgram, mat_list, 2);
-		else if (activeKey == 'c') SetMaterial(shaderProgram, mat_list, 3);
-		else if (activeKey == 'd') SetMaterial(shaderProgram, mat_list, 4);
-		else SetMaterial(shaderProgram, mat_list, 5);
+		if (activeKey == 'a') SetMaterial(shaderProgram, mat_list, 1, 1);
+		else if (activeKey == 'b') SetMaterial(shaderProgram, mat_list, 2, 1);
+		else if (activeKey == 'c') SetMaterial(shaderProgram, mat_list, 3, 1);
+		else if (activeKey == 'd') SetMaterial(shaderProgram, mat_list, 4, 1);
+		else SetMaterial(shaderProgram, mat_list, 5, 1);
 
 
 		// use key that is
@@ -1200,7 +1200,7 @@ void wallSlide(float newX, float newZ, MapFile map_data) {
 	}
 }
 
-void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind) {
+void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind, int doSet) {
 	Material mat = mat_list.at(ind);
 
 	GLint uniKa = glGetUniformLocation(shaderProgram, "mat.Ka");
@@ -1217,6 +1217,11 @@ void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind) {
 
 	GLint uniNs = glGetUniformLocation(shaderProgram, "mat.Ns");
 	glUniform1f(uniNs, mat.Ns);
+
+	GLint uniMat = glGetUniformLocation(shaderProgram, "useMat");
+	glUniform1i(uniMat, doSet);  // is set to True in shader
+
+	
 }
 
 void SetLights(int shaderProgram, PointLights point_lights) {
@@ -1229,7 +1234,7 @@ void SetLights(int shaderProgram, PointLights point_lights) {
 }
 
 // load .obj type models
-float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* file_nameMTL, vector<Material>& mat_list) {
+float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* file_nameMTL, vector<Material>& mat_list, bool verbose) {
 	// load materials
 	loadModelMTL(file_nameMTL, mat_list);
 
@@ -1307,8 +1312,6 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 			for (int i = 0; i < mat_list.size(); i++) {
 				if (strcmp(mat_list[i].newmtl, mtl) == 0) {
 					curr_mat_ind = i;
-					//cout << i << endl;
-					//mat_list[i].debug();
 				}
 			}
 		}
@@ -1316,23 +1319,24 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 
 	fclose(fp);
 
-	const int n = 8;
+	const int n = 9;
 	numLines = vertex_ind.size() * n;  // 3 floats for x,y,z of vertex, 2 for u,v texture coordinates, 3 for vertex normal x,y,z, 1 mat index
 	float* model1 = new float[numLines];
+	if (verbose) {
+		printf("num_tri %d, lines %d, size of vertexInd %d, textureInd %d, normalInd %d, materialInd %d\n", num_tri, numLines, vertex_ind.size(), texture_ind.size(), normal_ind.size(), material_ind.size());
+		printf("size of vertexArr %d, size of textureArr %d, size of normalArr %d\n", vertex_arr.size(), texture_arr.size(), normal_arr.size());
 
-	//printf("num_tri %d, lines %d, size of vertexInd %d, textureInd %d, normalInd %d, materialInd %d\n", num_tri, numLines, vertex_ind.size(), texture_ind.size(), normal_ind.size(), material_ind.size());
-	//printf("size of vertexArr %d, size of textureArr %d, size of normalArr %d\n", vertex_arr.size(), texture_arr.size(), normal_arr.size());
-	//
-	//cout << endl;
-	//for (int i = 0; i < material_ind.size(); i++) {
-	//	int j;
-	//	for (j = 0; j < i; j++)
-	//		if (material_ind[i] == material_ind[j])
-	//			break;
-	//	if (i == j)
-	//		cout << material_ind[i] << " ";
-	//}
-	//cout << endl;
+		cout << endl;
+		for (int i = 0; i < material_ind.size(); i++) {
+			int j;
+			for (j = 0; j < i; j++)
+				if (material_ind[i] == material_ind[j])
+					break;
+			if (i == j)
+				cout << material_ind[i] << " ";
+		}
+		cout << endl;
+	}
 	
 	for (int i = 0; i < vertex_ind.size(); i++) {
 		// vertex x,y,z
@@ -1353,9 +1357,44 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 		model1[(i * n) + 6] = normal_arr[normal_ind[i] - 1].y;
 		model1[(i * n) + 7] = normal_arr[normal_ind[i] - 1].z;
 		// material index
-		//model1[(i * 9) + 8] = material_ind[i];
+		model1[(i * n) + 8] = float(material_ind[i]);  // issue here is that this is an int being allocated to floats pointer
+	}
+	if (verbose) {
+		printf("nice, successful obj loaded\n");
+	}
+	return model1;
+}
+
+void SendMaterialsToShader(int shaderProgram, vector<Material> mat_list) {
+	const int size = 18;
+	glm::vec3 inMatsKa[size];
+	glm::vec3 inMatsKs[size];
+	glm::vec3 inMatsKd[size];
+	glm::vec3 inMatsKe[size];
+	float inMatsNs[size];
+
+	for (int i = 0; i < size; i++) {
+		Material mat = mat_list[i];
+		inMatsKa[i] = mat.Ka;
+		inMatsKs[i] = mat.Ks;
+		inMatsKd[i] = mat.Kd;
+		inMatsKe[i] = mat.Ke;
+		inMatsNs[i] = mat.Ns;
 	}
 
-	printf("nice, successful obj loaded\n");
-	return model1;
+	GLint uniKa = glGetUniformLocation(shaderProgram, "inMatsKa");
+	glUniform3fv(uniKa, size, glm::value_ptr(inMatsKa[0]));
+
+	GLint uniKs = glGetUniformLocation(shaderProgram, "inMatsKs");
+	glUniform3fv(uniKs, size, glm::value_ptr(inMatsKs[0]));
+
+	GLint uniKd = glGetUniformLocation(shaderProgram, "inMatsKd");
+	glUniform3fv(uniKd, size, glm::value_ptr(inMatsKd[0]));
+
+	GLint uniKe = glGetUniformLocation(shaderProgram, "inMatsKe");
+	glUniform3fv(uniKe, size, glm::value_ptr(inMatsKe[0]));
+
+	GLint uniNs = glGetUniformLocation(shaderProgram, "inMatsNs");
+	glUniform1fv(uniNs, size, inMatsNs);
+
 }

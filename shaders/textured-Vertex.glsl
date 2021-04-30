@@ -3,6 +3,7 @@
 in vec3 position;
 in vec3 inNormal;
 in vec2 inTexcoord;
+in float inMatIndex;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -18,6 +19,7 @@ out vec3 pointLightsCOLOR[POINT_LIGHTS_SIZE];
 out vec3 vertNormal;
 out vec3 pos;
 out vec2 texcoord;
+out float matIndex;
 
 void main() {
    gl_Position = proj * view * model * vec4(position,1.0);
@@ -31,4 +33,5 @@ void main() {
    vec4 norm4 = transpose(inverse(view*model)) * vec4(inNormal,0.0);
    vertNormal = normalize(norm4.xyz);
    texcoord = inTexcoord;
+   matIndex = inMatIndex;
 }
