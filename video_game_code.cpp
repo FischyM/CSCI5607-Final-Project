@@ -2,10 +2,11 @@
 // Code adapted from Stephen Guy
 
 const char* INSTRUCTIONS = "Press W and S to move forward and backwards\n\
-Press A and D to rotate left and right.\n\
+Press A and D to move left and right.\n\
 Find the teapot to win!\n\
 You may find doors blocking your way. Find the key to unlock these doors.\n\
 Press E to drop a key on an open floor\n\
+Press Space to jump\n\
 Press F to change between fullscreen and windowed.\n\
 Press Esc to exit the game.\n";
 
@@ -106,6 +107,8 @@ struct PointLights {
 };
 
 PointLights point_lights;
+PointLights Moon;
+PointLights Stars;
 
 struct MapFile {
 	int width = 0;
@@ -252,31 +255,55 @@ int main(int argc, char* argv[]) {
 	int numVertsWall = numLines / n;
 	printf("%d, %d\n", numLines, numVertsWall);
 
+	// load model 7 - sphere (Moon) 
+	modelFile.open("models/sphere.txt");
+	numLines = 0;
+	modelFile >> numLines;
+	float* modelSphere = new float[numLines];
+	for (int i = 0; i < numLines; i++) {
+		modelFile >> modelSphere[i];
+	}
+	printf("%d\n", numLines);
+	int numVertsSphere = numLines / n;
+	modelFile.close();
 
+	//load model 8 - cloud
+	numLines = 0;
+	float* modelCloud = loadModelOBJwithMTL("models/Cloud2.obj", numLines, "models/Cloud2.mtl", mat_list);
+	int numVertsCloud = numLines / n;
+	printf("%d, %d\n", numLines, numVertsCloud);
 
 	//SJG: I load each model in a different array, then concatenate everything in one big array
 	// This structure works, but there is room for improvement here. Eg., you should store the start
 	// and end of each model a data structure or array somewhere.
 	//Concatenate model arrays
-	float* modelData = new float[(numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall) * n];
-	copy(modelCube,   modelCube + numVertsCube * n,     modelData);
-	copy(modelSword,  modelSword + numVertsSword * n,   modelData + numVertsCube * n);
-	copy(modelFloor,  modelFloor + numVertsFloor * n,   modelData + numVertsCube * n + numVertsSword * n);
-	copy(modelKey1,   modelKey1 + numVertsKey1 * n,     modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n);
+	float* modelData = new float[(numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere +numVertsCloud) * n];
+	//float* tracker = modelData;
+	copy(modelCube, modelCube + numVertsCube * n,		modelData);
+	copy(modelSword, modelSword + numVertsSword * n,	modelData + numVertsCube * n);
+	copy(modelFloor, modelFloor + numVertsFloor * n,	modelData + numVertsCube * n + numVertsSword * n);
+	copy(modelKey1, modelKey1 + numVertsKey1 * n,		modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n);
 	copy(modelPotion, modelPotion + numVertsPotion * n, modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n);
-	copy(modelWall,   modelWall + numVertsWall * n,     modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n);
+	copy(modelWall, modelWall + numVertsWall * n,		modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n);
+	copy(modelSphere, modelSphere + numVertsSphere * n,	modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n +  numVertsWall * n);
+	copy(modelCloud, modelCloud + numVertsCloud * n,	modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n +numVertsSphere*n);
 
-	int totalNumVerts = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall;
+
+
+	int totalNumVerts = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere + numVertsCloud;
 	int startVertCube = 0;  //The cube is the first model in the VBO
 	int startVertSword = numVertsCube; //The sword starts right after the cube
 	int startVertFloor = numVertsCube + numVertsSword; //The floor starts right after the sword
 	int startVertKey = numVertsCube + numVertsSword + numVertsFloor; //The key starts right after the floor
 	int startPotion = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1;
 	int startWall = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion;
+	int startSphere = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall;
+	int startCloud = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall +numVertsSphere;
+
 
 	// use these for DrawGeometry, its too cumbersome to add all of them
-	vector<int> modelNumVerts = { numVertsCube, numVertsSword, numVertsFloor, numVertsKey1, numVertsPotion, numVertsWall };
-	vector<int> modelStarts = { startVertCube, startVertSword, startVertFloor, startVertKey, startPotion, startWall };
+	vector<int> modelNumVerts = { numVertsCube, numVertsSword, numVertsFloor, numVertsKey1, numVertsPotion, numVertsWall ,numVertsSphere, numVertsCloud };
+	vector<int> modelStarts = { startVertCube, startVertSword, startVertFloor, startVertKey, startPotion, startWall, startSphere, startCloud };
 
 
 	//// Allocate Texture 0 (Wood) ///////
@@ -384,6 +411,16 @@ int main(int argc, char* argv[]) {
 	loadMapFile("maps/complicated.txt", map_data);  // test_with_doors complicated
 
 
+
+	// set up the moon
+	Moon.size = 1;
+	Moon.pos[0] = glm::vec3(-30, 30, -30);
+	Moon.color[0] = glm::vec3(100, 100, 100);
+	Moon.debug();
+
+
+
+
 	// set up multiple point lights
 	int count = 0;
 	for (int i = 0; i < 3; i++) {
@@ -427,7 +464,7 @@ int main(int argc, char* argv[]) {
 	bool inAir = false;
 
 
-	
+
 	for (int i = 0; i < mat_list.size(); i++) {
 		cout << i << " ";
 		mat_list[i].debug();
@@ -544,7 +581,9 @@ int main(int argc, char* argv[]) {
 		}
 
 		// Clear the screen to default color
-		glClearColor(.2f, 0.4f, 0.8f, 1.0f);
+		glClearColor(.0f, 0.0f, 0.0f, 1.0f);
+		//glClearColor(.2f, 0.4f, 0.8f, 1.0f);
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glUseProgram(texturedShader);
@@ -577,7 +616,7 @@ int main(int argc, char* argv[]) {
 
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-		glm::mat4 proj = glm::perspective(3.14f / 4, screenWidth / (float)screenHeight, 0.1f, 40.0f); //FOV, aspect, near, far
+		glm::mat4 proj = glm::perspective(3.14f / 4, screenWidth / (float)screenHeight, 0.1f, 500.0f); //FOV, aspect, near, far
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
 
@@ -601,6 +640,8 @@ int main(int argc, char* argv[]) {
 	delete[] modelFloor;
 	delete[] modelKey1;
 	delete[] modelPotion;
+	delete[] modelWall;
+	delete[] modelSphere;
 	delete[] modelData;
 	delete map_data.data;
 	glDeleteProgram(texturedShader);
@@ -610,7 +651,7 @@ int main(int argc, char* argv[]) {
 	SDL_GL_DeleteContext(context);
 	SDL_Quit();
 	return 0;
-}
+} 
 
 // all rendering code goes here
 void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> modelStarts, MapFile map_data) {
@@ -621,6 +662,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 	// set a single point light
 	//printf("before SetLight\n");
+	SetLights(shaderProgram, Moon);
 	SetLights(shaderProgram, point_lights);
 	//printf("after SetLight\n");
 
@@ -637,6 +679,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	// modelKey1;   3
 	// modelPotion; 4
 	// breakable wall 5
+	// modelSphere;	6
 	for (int j = 0; j < map_data.height; j++) {
 		for (int i = 0; i < map_data.width; i++) {
 			char map_type = map_data.data[j * map_data.width + i];
@@ -681,7 +724,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				model = glm::translate(model, glm::vec3(i, sin(timePast) * 0.14, j));
 				model = glm::scale(model, glm::vec3(.11f));
 				model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 0.0f));
-				
+
 				SetMaterial(shaderProgram, mat_list, 16);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 
@@ -744,7 +787,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 			}
 			// draw a potion
 			else if (map_type == 'p') {
-				
+
 				glm::mat4 model = glm::mat4(1);
 				model = glm::translate(model, glm::vec3(i, -0.2 + sin(timePast) * 0.18, j));
 				model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
@@ -776,6 +819,26 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		}
 	}
 
+	// draw Moon
+	glm::mat4 model = glm::mat4(1);
+	model = glm::translate(model, Moon.pos[0]);
+	model = glm::scale(model, 50.0f * glm::vec3(0.2f, 0.2f, 0.2f));
+	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
+	glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
+	SetMaterial(shaderProgram, mat_list, 0);
+	glDrawArrays(GL_TRIANGLES, modelStarts[6], modelNumVerts[6]);
+
+
+	// draw cloud
+	model = glm::mat4(1);
+	model = glm::translate(model, glm::vec3(20,10,-20));
+	model = glm::scale(model, 5.0f * glm::vec3(0.2f, 0.2f, 0.2f));
+	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
+	glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
+	SetMaterial(shaderProgram, mat_list, 0);
+	glDrawArrays(GL_TRIANGLES, modelStarts[7], modelNumVerts[7]);
+
+
 	// draw lights
 	for (int i = 0; i < point_lights.size; i++) {
 		// for each light, draw them as a square
@@ -802,9 +865,9 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 		// use key that is
 		glm::mat4 model = glm::mat4(1);
-		model = glm::translate(model, glm::vec3(cam_pos.x + cam_dir.x / 2, -0.1+cam_pos.y, cam_pos.z + cam_dir.z / 2));
+		model = glm::translate(model, glm::vec3(cam_pos.x + cam_dir.x / 2, -0.1 + cam_pos.y, cam_pos.z + cam_dir.z / 2));
 		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
-		model = glm::rotate(model, -cam_angle+ 3.14f / 4, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, -cam_angle + 3.14f / 4, glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, -3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
 
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
@@ -1333,7 +1396,7 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 	//		cout << material_ind[i] << " ";
 	//}
 	//cout << endl;
-	
+
 	for (int i = 0; i < vertex_ind.size(); i++) {
 		// vertex x,y,z
 		model1[(i * n)] = vertex_arr[vertex_ind[i] - 1].x;
