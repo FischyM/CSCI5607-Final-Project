@@ -52,6 +52,9 @@ int screenHeight = 600;
 // mouse motion variables
 static int xpos = screenWidth / 2; // = 400 to center the cursor in the window
 static int ypos = screenHeight / 2; // = 300 to center the cursor in the window
+//mouse click variables
+float mouseClickStartTime = 0;
+float clickAnimationTime = 1;
 
 
 
@@ -292,7 +295,7 @@ int main(int argc, char* argv[]) {
 	int numVertsWall = numLines / n;
 	printf("%d, %d\n", numLines, numVertsWall);
 
-	// load model 7 - sphere (Moon) 
+	// load model 7 - sphere (Moon?) 
 	modelFile.open("models/sphere.txt");
 	numLines = 0;
 	modelFile >> numLines;
@@ -458,10 +461,10 @@ int main(int argc, char* argv[]) {
 	//******************************************************************* lights source  *****************************************************//* 
 
 
-	// set up the moon
+	// set up the moon Problem: not lighting, can't change light color
 	Moon.size = 1;
 	Moon.pos[0] = glm::vec3(-30, 30, -30);
-	Moon.color[0] = glm::vec3(100, 100, 100);
+	Moon.color[0] = glm::vec3(100, 200, 150);
 	Moon.debug();
 
 
@@ -561,6 +564,13 @@ int main(int argc, char* argv[]) {
 				xpos += windowEvent.motion.xrel;
 				ypos += windowEvent.motion.yrel;
 
+			}
+
+			//if mouse click event happend
+			if (windowEvent.type == SDL_MOUSEBUTTONDOWN) {
+				printf("mouse click\n");
+				mouseClickStartTime= SDL_GetTicks() / 1000.f;
+				break;
 			}
 		}
 
@@ -707,7 +717,6 @@ void setCameraHight(float time, MapFile& map_data)
 		cam_pos.y = baseH + jumpHight;
 	}
 }
-
 
 // all rendering code goes here
 void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> modelStarts, MapFile map_data) {
@@ -919,12 +928,17 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		else SetMaterial(shaderProgram, mat_list, 5);
 
 
-		// use key that is
+		// Add animation for hold item
+		float time = SDL_GetTicks() / 1000.f;
+		float ClickPassTime = time - mouseClickStartTime;
 		glm::mat4 model = glm::mat4(1);
 		model = glm::translate(model, glm::vec3(cam_pos.x + cam_dir.x / 2, -0.1 + cam_pos.y, cam_pos.z + cam_dir.z / 2));
 		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
 		model = glm::rotate(model, -cam_angle + 3.14f / 4, glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, -3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
+		if (ClickPassTime < clickAnimationTime) {
+			model = glm::rotate(model, -3.14f/2  * ClickPassTime, cam_dir);
+		}
 
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 		//Set which texture to use (-1 = no texture)
@@ -1145,6 +1159,12 @@ bool isWalkableAndEvents(float newX, float newZ, MapFile map_data) {
 				map_data.data[ind] = 'O';
 				hulkPotionPosIndex = ind;
 				return true;
+			}
+			// breakable wall
+			if (map_tile == 'w') {
+				if (verbose) printf("breakable wall w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
+				if (hulkMode == true) { return true; }
+				return false;
 			}
 		}
 	}
