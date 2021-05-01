@@ -57,7 +57,7 @@ static int ypos = screenHeight / 2; // = 300 to center the cursor in the window
 float mouseClickStartTime = 0;
 float clickPassTime = 0;
 float clickAnimationTime = 0.3;
-bool Click = false;
+bool LeftMouseClick = false;
 
 
 
@@ -599,9 +599,15 @@ int main(int argc, char* argv[]) {
 
 			//if mouse click event happend
 			if (windowEvent.type == SDL_MOUSEBUTTONDOWN) {
-				printf("mouse click\n");
-				Click = true;
-				mouseClickStartTime= SDL_GetTicks() / 1000.f;
+				if (windowEvent.button.button == SDL_BUTTON_LEFT) {
+					printf("left mouse click\n");
+					LeftMouseClick = true;
+					mouseClickStartTime= SDL_GetTicks() / 1000.f;
+				}
+				if (windowEvent.button.button == SDL_BUTTON_RIGHT) {
+					printf("right mouse click\n");
+					dropKey(cam_pos.x, cam_pos.z, map_data);
+				}
 			}
 		}
 
@@ -637,7 +643,7 @@ int main(int argc, char* argv[]) {
 		clickPassTime = time - mouseClickStartTime;
 		//set click status
 		if (clickPassTime > clickAnimationTime) {
-			Click = false;
+			LeftMouseClick = false;
 		}
 
 		
@@ -656,7 +662,8 @@ int main(int argc, char* argv[]) {
 			wallSlide(new_x, new_z, map_data);
 		}
 
-		if (Click && clickPassTime >= clickAnimationTime - 0.02) {
+		//check click event after click animation done.
+		if (LeftMouseClick && clickPassTime >= clickAnimationTime - 0.02) {
 			CheckClickEvent(cam_pos.x +cam_dir.x, cam_pos.z+cam_dir.z, map_data);
 		}
 
@@ -1015,8 +1022,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		model = glm::rotate(model, -3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
 
 		
-		int ModelInd = 3;//defalut it key
-		//when holding a potion
+		int ModelInd = 3;//defalut model is key
 		if (activeItem=='p') {
 			model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
 			ModelInd = 5;
