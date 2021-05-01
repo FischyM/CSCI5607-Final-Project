@@ -1,0 +1,20 @@
+	//************
+	// Models
+	//*************
+	// indexes for models
+	// Cube   	0
+	// Sword  	1
+	// Floor  	2
+	// Key   	3
+	// Potion 	4
+	// break_wall 	5
+	// Sphere	6
+	// Cloud 	7
+	// Hammer 	8 
+
+
+
+	//************
+	// Materials
+	// See Debug Console
+	//*************

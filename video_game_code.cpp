@@ -3,7 +3,8 @@
 
 const char* INSTRUCTIONS = "Press W and S to move forward and backwards\n\
 Press A and D to move left and right.\n\
-Find the teapot to win!\n\
+Left mouse click to use owned item, right mouse click to drop item.\n\
+Find the goal to win!\n\
 You may find doors blocking your way. Find the key to unlock these doors.\n\
 Press E to drop a key on an open floor\n\
 Press Space to jump\n\
@@ -54,7 +55,10 @@ static int xpos = screenWidth / 2; // = 400 to center the cursor in the window
 static int ypos = screenHeight / 2; // = 300 to center the cursor in the window
 //mouse click variables
 float mouseClickStartTime = 0;
-float clickAnimationTime = 1;
+float clickPassTime = 0;
+float clickAnimationTime = 0.3;
+bool Click = false;
+
 
 
 
@@ -62,11 +66,12 @@ float clickAnimationTime = 1;
 float timePast = 0;
 float dt = 0;
 bool goal_found = false;
-char activeKey = '0';
+char activeItem = '0';
 
 //Character parameters
 int accel = 1;
 float char_radius = 0.125;
+float char_Event_radius = 0.6;
 float slowFactor = 0.75;
 float human_Base_Hight = 0; //human hight
 
@@ -178,8 +183,20 @@ bool isKey(char type) {
 		return false;
 }
 
+bool isItem(char type) {
+	if (type == 'p' || type == 'h'|| isKey(type))
+		return true;
+	else
+		return false;
+}
+
+
 bool isWall(char type) {
 	return type == 'W';
+}
+
+bool isBreakableWall(char type) {
+	return type == 'w';
 }
 
 void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> modelStarts, MapFile map_data);
@@ -190,7 +207,9 @@ void loadMapFile(const char* file_name, MapFile& map_data);
 
 void dropKey(float vx, float vz, MapFile map_data);
 
-bool isWalkableAndEvents(float newX, float newZ, MapFile map_data);
+void CheckClickEvent(float x, float z, MapFile map_data);
+
+bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data);
 
 void wallSlide(float newX, float newZ, MapFile map_data);
 
@@ -245,8 +264,10 @@ int main(int argc, char* argv[]) {
 	loadModelMTL("models/key4.mtl", mat_list);
 	loadModelMTL("models/key5.mtl", mat_list);
 
+	//loadModelMTL("models/Potion.mtl", mat_list);
 
-	//Here we will load three different model files 
+
+	//Here we will load different model files 
 	const int n = 8;
 	//Load Model 1 - cube
 	ifstream modelFile;
@@ -313,11 +334,18 @@ int main(int argc, char* argv[]) {
 	int numVertsCloud = numLines / n;
 	printf("%d, %d\n", numLines, numVertsCloud);
 
+	//load model 9 - Hammer
+	numLines = 0;
+	float* modelHammer = loadModelOBJwithMTL("models/Hammer_Double.obj", numLines, "models/Hammer_Double.mtl", mat_list);
+	int numVertsHammer = numLines / n;
+	printf("%d, %d\n", numLines, numVertsHammer);
+
+
 	//SJG: I load each model in a different array, then concatenate everything in one big array
 	// This structure works, but there is room for improvement here. Eg., you should store the start
 	// and end of each model a data structure or array somewhere.
 	//Concatenate model arrays
-	float* modelData = new float[(numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere +numVertsCloud) * n];
+	float* modelData = new float[(numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere +numVertsCloud +numVertsHammer) * n];
 	//float* tracker = modelData;
 	copy(modelCube, modelCube + numVertsCube * n,		modelData);
 	copy(modelSword, modelSword + numVertsSword * n,	modelData + numVertsCube * n);
@@ -327,10 +355,11 @@ int main(int argc, char* argv[]) {
 	copy(modelWall, modelWall + numVertsWall * n,		modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n);
 	copy(modelSphere, modelSphere + numVertsSphere * n,	modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n +  numVertsWall * n);
 	copy(modelCloud, modelCloud + numVertsCloud * n,	modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n +numVertsSphere*n);
+	copy(modelHammer, modelHammer + numVertsHammer * n, modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n + numVertsSphere * n + numVertsCloud*n);
 
 
 
-	int totalNumVerts = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere + numVertsCloud;
+	int totalNumVerts = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere + numVertsCloud + numVertsHammer;
 	int startVertCube = 0;  //The cube is the first model in the VBO
 	int startVertSword = numVertsCube; //The sword starts right after the cube
 	int startVertFloor = numVertsCube + numVertsSword; //The floor starts right after the sword
@@ -339,11 +368,13 @@ int main(int argc, char* argv[]) {
 	int startWall = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion;
 	int startSphere = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall;
 	int startCloud = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall +numVertsSphere;
+	int startHammer = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere +numVertsCloud;
+
 
 
 	// use these for DrawGeometry, its too cumbersome to add all of them
-	vector<int> modelNumVerts = { numVertsCube, numVertsSword, numVertsFloor, numVertsKey1, numVertsPotion, numVertsWall ,numVertsSphere, numVertsCloud };
-	vector<int> modelStarts = { startVertCube, startVertSword, startVertFloor, startVertKey, startPotion, startWall, startSphere, startCloud };
+	vector<int> modelNumVerts = { numVertsCube, numVertsSword, numVertsFloor, numVertsKey1, numVertsPotion, numVertsWall ,numVertsSphere, numVertsCloud, numVertsHammer };
+	vector<int> modelStarts = { startVertCube, startVertSword, startVertFloor, startVertKey, startPotion, startWall, startSphere, startCloud, startHammer };
 
 
 
@@ -569,8 +600,8 @@ int main(int argc, char* argv[]) {
 			//if mouse click event happend
 			if (windowEvent.type == SDL_MOUSEBUTTONDOWN) {
 				printf("mouse click\n");
+				Click = true;
 				mouseClickStartTime= SDL_GetTicks() / 1000.f;
-				break;
 			}
 		}
 
@@ -599,13 +630,24 @@ int main(int argc, char* argv[]) {
 		setCamDirFromAngle(cam_angle);
 
 
+		float time = SDL_GetTicks() / 1000.f;
+		dt = time - timePast;
+		timePast = time;
 
+		clickPassTime = time - mouseClickStartTime;
+		//set click status
+		if (clickPassTime > clickAnimationTime) {
+			Click = false;
+		}
+
+		
+		
 
 		// check for collision
 		float new_x = cam_pos.x + v_x * dt;
 		float new_z = cam_pos.z + v_z * dt;
 		// return true if movement does not collide with objects
-		if (isWalkableAndEvents(new_x, new_z, map_data)) {
+		if (isWalkableAndPickUp(new_x, new_z, map_data)) {
 			// change camera position if we should move
 			cam_pos.x = new_x;
 			cam_pos.z = new_z;
@@ -614,8 +656,17 @@ int main(int argc, char* argv[]) {
 			wallSlide(new_x, new_z, map_data);
 		}
 
+		if (Click && clickPassTime >= clickAnimationTime - 0.02) {
+			CheckClickEvent(cam_pos.x +cam_dir.x, cam_pos.z+cam_dir.z, map_data);
+		}
+
 		// check if e was pressed to drop key
 		if (is_e) {
+			dropKey(new_x, new_z, map_data);
+		}
+
+		if (!hulkMode && activeItem == 'h') {
+			printf("hammer too heavy for humna, so drop it\n");
 			dropKey(new_x, new_z, map_data);
 		}
 
@@ -627,13 +678,12 @@ int main(int argc, char* argv[]) {
 
 		glUseProgram(texturedShader);
 
-		float time = SDL_GetTicks() / 1000.f;
-		dt = time - timePast;
-		timePast = time;
-
 		
 		//jump or hulk mode will change the camera hight
 		setCameraHight(time, map_data);
+		
+		
+		
 
 
 		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);  // TODO is this the issue?  //Fan: what issue?
@@ -666,6 +716,8 @@ int main(int argc, char* argv[]) {
 	delete[] modelPotion;
 	delete[] modelWall;
 	delete[] modelSphere;
+	delete[] modelCloud;
+	delete[] modelHammer;
 	delete[] modelData;
 	delete map_data.data;
 	glDeleteProgram(texturedShader);
@@ -682,9 +734,9 @@ void setCameraHight(float time, MapFile& map_data)
 {
 	// change camera postion if character is in hulkmode
 	float baseH = human_Base_Hight;
-	if (hulkMode == true) {
-		float hulkPassTime = time - hulkStartTime;
+	float hulkPassTime = time - hulkStartTime;
 
+	if (hulkMode == true) {
 		if (hulkPassTime < hulkGrowTime) {
 			baseH = hulkPassTime * hulkBaseH / hulkGrowTime;
 		}
@@ -695,7 +747,7 @@ void setCameraHight(float time, MapFile& map_data)
 			baseH = hulkBaseH * (hulkMaintainTime + hulkShrinkTime - hulkPassTime) / hulkShrinkTime;
 		}
 		else {
-			hulkMode == false;
+			hulkMode = false;
 			map_data.data[hulkPotionPosIndex] = 'p';
 		}
 	}
@@ -745,6 +797,8 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	// modelPotion; 4
 	// breakable wall 5
 	// modelSphere;	6
+	// modelCloud; 7
+	// modelHammer; 8 
 	for (int j = 0; j < map_data.height; j++) {
 		for (int i = 0; i < map_data.width; i++) {
 			char map_type = map_data.data[j * map_data.width + i];
@@ -850,6 +904,24 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				draw_floor = true;
 
 			}
+			// draw a hammer
+			else if (map_type == 'h') {
+
+				glm::mat4 model = glm::mat4(1);
+				model = glm::translate(model, glm::vec3(i, -0.2 + sin(timePast) * 0.18, j));
+				model = glm::scale(model, glm::vec3(.2f, .2f, .2f));
+				model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 0.0f));
+
+				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
+
+				glUniform1i(uniTexID, -1);
+				SetMaterial(shaderProgram, mat_list, 22);
+
+				glDrawArrays(GL_TRIANGLES, modelStarts[8], modelNumVerts[8]); //(Primitive Type, Start Vertex, Num Verticies)
+
+				draw_floor = true;
+			}
+
 			// draw a potion
 			else if (map_type == 'p') {
 
@@ -919,33 +991,48 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 	// changes due to events
 	// render inventoried key
-	if (activeKey != '0') {
+	if (activeItem != '0') {
 		// set color
-		if (activeKey == 'a') SetMaterial(shaderProgram, mat_list, 1);
-		else if (activeKey == 'b') SetMaterial(shaderProgram, mat_list, 2);
-		else if (activeKey == 'c') SetMaterial(shaderProgram, mat_list, 3);
-		else if (activeKey == 'd') SetMaterial(shaderProgram, mat_list, 4);
-		else SetMaterial(shaderProgram, mat_list, 5);
+		if (activeItem == 'a') SetMaterial(shaderProgram, mat_list, 1);
+		else if (activeItem == 'b') SetMaterial(shaderProgram, mat_list, 2);
+		else if (activeItem == 'c') SetMaterial(shaderProgram, mat_list, 3);
+		else if (activeItem == 'd') SetMaterial(shaderProgram, mat_list, 4);
+		else if (activeItem == 'e') SetMaterial(shaderProgram, mat_list, 5);
+		else if (activeItem == 'p') SetMaterial(shaderProgram, mat_list, 14);
+		else if (activeItem == 'h') SetMaterial(shaderProgram, mat_list, 22);
+		else {}
 
 
 		// Add animation for hold item
 		float time = SDL_GetTicks() / 1000.f;
-		float ClickPassTime = time - mouseClickStartTime;
 		glm::mat4 model = glm::mat4(1);
 		model = glm::translate(model, glm::vec3(cam_pos.x + cam_dir.x / 2, -0.1 + cam_pos.y, cam_pos.z + cam_dir.z / 2));
-		model = glm::scale(model, glm::vec3(.3f, .3f, .3f));
+		model = glm::scale(model, glm::vec3(.2f, .2f, .2f));
+		if (clickPassTime < clickAnimationTime) {
+			model = glm::rotate(model, -3.14f/1.5f  * clickPassTime, cam_dir);
+		}
 		model = glm::rotate(model, -cam_angle + 3.14f / 4, glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, -3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
-		if (ClickPassTime < clickAnimationTime) {
-			model = glm::rotate(model, -3.14f/2  * ClickPassTime, cam_dir);
-		}
 
+		
+		int ModelInd = 3;//defalut it key
+		//when holding a potion
+		if (activeItem=='p') {
+			model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
+			ModelInd = 5;
+		}
+		if (activeItem == 'h') {
+			model = glm::scale(model, glm::vec3(.4f, .4f, .4f));
+			model = glm::rotate(model, 3.14f *3/4, glm::vec3(1.0f, 0.0f, 0.0f));
+			ModelInd = 8;
+		}
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 		//Set which texture to use (-1 = no texture)
 		glUniform1i(uniTexID, -1);
 		//Draw an instance of the model (at the position & orientation specified by the model matrix above)
-		glDrawArrays(GL_TRIANGLES, modelStarts[3], modelNumVerts[3]);
+		glDrawArrays(GL_TRIANGLES, modelStarts[ModelInd], modelNumVerts[ModelInd]);
 	}
+
 }
 
 // Create a NULL-terminated string by reading the provided file
@@ -1098,8 +1185,44 @@ void loadMapFile(const char* file_name, MapFile& map_data) {
 	}
 }
 
+void CheckClickEvent(float x, float z, MapFile map_data) {
+	
+	vector<int> bounds = { -1, 1 };
+	for (auto dx : bounds) {
+		for (auto dz : bounds) {
+			int w = ceil(x + char_Event_radius * dx);
+			int h = ceil(z + char_Event_radius * dz);
+			if (w < 1 || h < 1 || w > map_data.width || h > map_data.height) { continue; }
+			
+			int ind = (h - 1) * map_data.width + (w - 1);
+			char map_tile = map_data.data[ind];
+
+			//open door
+			if (isDoor(map_tile)) {  // if it's a door 
+				if (doorToKey[map_tile] == activeItem) {  //and you have the right key
+					// remove key and remove door, now you can move
+					activeItem = '0';
+					map_data.data[ind] = 'O';
+				}
+			}
+
+			//drink potion
+			if (activeItem=='p') {
+				activeItem = '0';
+				hulkMode = true;
+				hulkStartTime = SDL_GetTicks() / 1000.f;
+			}
+			
+			// break wall
+			if (isBreakableWall(map_tile) && hulkMode && activeItem=='h' ) {
+				map_data.data[ind] = 'O';
+			}
+		}
+	}
+}
+
 // Can the character walk to the tile?
-bool isWalkableAndEvents(float newX, float newZ, MapFile map_data) {
+bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data) {
 	// calc player offset x and z
 	bool verbose = false;
 	float x = newX + 0.5f;
@@ -1116,55 +1239,38 @@ bool isWalkableAndEvents(float newX, float newZ, MapFile map_data) {
 			int ind = (h - 1) * map_data.width + (w - 1);
 			char map_tile = map_data.data[ind];
 			//printf("x/w {%.4f}/{%d}    z/h {%.4f}/{%d}    map ind/type {%d}/{%c}\n", x, w, z, h, ind, map_tile);
-			if (isWall(map_tile)) {  // is wall
-				if (verbose) printf("wall w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
+			if (isWall(map_tile) || isDoor(map_tile)||isBreakableWall(map_tile)) {  // is wall
+				if (verbose) printf("can't pass w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
 				return false;
 			}
-			if (isDoor(map_tile)) {  // if it's a door 
-				if (doorToKey[map_tile] == activeKey) {  //and you have the right key
-					if (verbose) printf("door with key w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
-					// remove key and remove door, now you can move
-					activeKey = '0';
-					map_data.data[ind] = 'O';
-					return true;
-				}
-				else {  // it is still locked and you cannot move
-					if (verbose) printf("door no key w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
-					return false;
-				}
-			}
-			// check if it's a key tile and no active key
-			if (isKey(map_tile)) {
-				if (verbose) printf("grab key w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
+			// pickup
+			if (isKey(map_tile) ) {
 				// no active key, pick it up and remove from map, can now move
-				if (activeKey == '0') {
-					activeKey = map_tile;
+				if (activeItem == '0') {
+					activeItem = map_tile;
 					map_data.data[ind] = 'O';
 				}
-				// either situation, no key and pick it up or if a key is already present, you can move
-				return true;
 			}
 			// we are at the goal
 			if (map_tile == 'G') {
 				// TODO: add in something fancy here
-				if (verbose) printf("goal w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
 				goal_found = true;
-				return true;
+
 			}
 			// hulk potion
 			if (map_tile == 'p') {
-				if (verbose) printf("potion w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
-				hulkMode = true;
-				hulkStartTime = SDL_GetTicks() / 1000.f;
-				map_data.data[ind] = 'O';
-				hulkPotionPosIndex = ind;
-				return true;
+				if (activeItem == '0' && !hulkMode) {
+					activeItem = 'p';
+					map_data.data[ind] = 'O';
+					hulkPotionPosIndex = ind;
+				}
 			}
-			// breakable wall
-			if (map_tile == 'w') {
-				if (verbose) printf("breakable wall w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
-				if (hulkMode == true) { return true; }
-				return false;
+			//hummer
+			if (map_tile == 'h') {
+				if (activeItem == '0' && hulkMode) {
+					activeItem = 'h';
+					map_data.data[ind] = 'O';
+				}
 			}
 		}
 	}
@@ -1242,7 +1348,7 @@ void dropKey(float vx, float vz, MapFile map_data) {
 	int ind = (h - 1) * map_data.width + (w - 1);
 	char map_tile = map_data.data[ind];
 	// only drop key if on an open square and we have a key
-	if (map_tile == 'O' && activeKey != '0') {
+	if (map_tile == 'O' && activeItem != '0') {
 		int h_offset = 0;
 		int w_offset = 0;
 		if (cam_dir.x > 0.5) {
@@ -1271,9 +1377,9 @@ void dropKey(float vx, float vz, MapFile map_data) {
 		if (ind >= map_data.width * map_data.height) ind = map_data.width * map_data.height - 1;
 		if (ind < 0) ind = 0;
 		if (map_data.data[ind] == 'O') {
-			map_data.data[ind] = activeKey;
+			map_data.data[ind] = activeItem;
 			// set active key to none
-			activeKey = '0';
+			activeItem = '0';
 		}
 	}
 }
@@ -1312,7 +1418,7 @@ void wallSlide(float newX, float newZ, MapFile map_data) {
 		if ((isDoor(right_map) || isWall(right_map))) {
 			if (verbose) printf("hitting right side of cube\n");
 			newX = cam_pos.x;  // essentially put velocity in x direction to 0
-			if (isWalkableAndEvents(newX, newZ, map_data)) {
+			if (isWalkableAndPickUp(newX, newZ, map_data)) {
 				cam_pos.z = newZ;
 			}
 		}
@@ -1320,7 +1426,7 @@ void wallSlide(float newX, float newZ, MapFile map_data) {
 		else if ((isDoor(left_map) || isWall(left_map))) {
 			if (verbose) printf("hitting left side of cube\n");
 			newX = cam_pos.x;  // essentially put velocity in x didrection to 0
-			if (isWalkableAndEvents(newX, newZ, map_data)) {
+			if (isWalkableAndPickUp(newX, newZ, map_data)) {
 				cam_pos.z = newZ;
 			}
 		}
@@ -1328,7 +1434,7 @@ void wallSlide(float newX, float newZ, MapFile map_data) {
 		else if ((isDoor(top_map) || isWall(top_map))) {
 			if (verbose) printf("hitting top side of cube\n");
 			newZ = cam_pos.z;  // essentially put velocity in z direction to 0
-			if (isWalkableAndEvents(newX, newZ, map_data)) {
+			if (isWalkableAndPickUp(newX, newZ, map_data)) {
 				cam_pos.x = newX;
 			}
 		}
@@ -1336,7 +1442,7 @@ void wallSlide(float newX, float newZ, MapFile map_data) {
 		else if ((isDoor(bottom_map) || isWall(bottom_map))) {
 			if (verbose) printf("hitting bottom side of cube\n");
 			newZ = cam_pos.z;  // essentially put velocity in z direction to 0
-			if (isWalkableAndEvents(newX, newZ, map_data)) {
+			if (isWalkableAndPickUp(newX, newZ, map_data)) {
 				cam_pos.x = newX;
 			}
 		}
