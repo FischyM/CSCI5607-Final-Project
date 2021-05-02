@@ -1,13 +1,15 @@
-// Mathew Fischbach, CSCI 5607
+// Mathew Fischbach,	CSCI 5607
+// Fan Ding,			CSCI 5607
+// Colin Hommerding,	CSCI 5607
 // Code adapted from Stephen Guy
 
 const char* INSTRUCTIONS = "Press W and S to move forward and backwards\n\
 Press A and D to move left and right.\n\
+Press Space to jump\n\
 Left mouse click to use owned item, right mouse click to drop item.\n\
 Find the goal to win!\n\
 You may find doors blocking your way. Find the key to unlock these doors.\n\
 Press E to drop a key on an open floor\n\
-Press Space to jump\n\
 Press F to change between fullscreen and windowed.\n\
 Press Esc to exit the game.\n";
 
@@ -56,7 +58,7 @@ static int ypos = screenHeight / 2; // = 300 to center the cursor in the window
 //mouse click variables
 float mouseClickStartTime = 0;
 float clickPassTime = 0;
-float clickAnimationTime = 0.3;
+float clickAnimationTime = 0.4;
 bool LeftMouseClick = false;
 
 
@@ -80,6 +82,7 @@ float human_Base_Hight = 0; //human hight
 bool hulkMode = false;
 float hulkBaseH = 0.7; //hulk hight
 float hulkStartTime = 0;
+float hulkPassTime = 0;
 float hulkGrowTime = 1; //animation for grow up
 float hulkShrinkTime = 1; //animation for Shrink
 float hulkMaintainTime = 20; //after 20seconds hulk mode off.
@@ -88,10 +91,10 @@ int hulkPotionPosIndex = 0; //replace potion if hulk mode off
 							
 //jump feature parameters
 float jumpStartTime = 0;
+float jumpPassTime = 0;
 float MaxInAirTime = 0.8; //Leave ground to back to ground, total 0.8 second.
 float HalfMaxInAirTime = MaxInAirTime / 2;
 float jumpMaxHight = 1;
-float jumpHight = 0;
 bool inAir = false;
 
 
@@ -237,7 +240,7 @@ int main(int argc, char* argv[]) {
 	//Create a context to draw in
 	SDL_GLContext context = SDL_GL_CreateContext(window);
 
-	//Mouse motion
+	//Set Mouse motion to true
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 
 	//Load OpenGL extentions with GLAD
@@ -316,7 +319,7 @@ int main(int argc, char* argv[]) {
 	int numVertsWall = numLines / n;
 	printf("%d, %d\n", numLines, numVertsWall);
 
-	// load model 7 - sphere (Moon?) 
+	// load model 7 - sphere (Moon?) Fan: tried to load Moon.obj. But it causes errors
 	modelFile.open("models/sphere.txt");
 	numLines = 0;
 	modelFile >> numLines;
@@ -492,7 +495,7 @@ int main(int argc, char* argv[]) {
 	//******************************************************************* lights source  *****************************************************//* 
 
 
-	// set up the moon Problem: not lighting, can't change light color
+	// set up the moon. Fan: the issue is not lighting, and can't change light color
 	Moon.size = 1;
 	Moon.pos[0] = glm::vec3(-30, 30, -30);
 	Moon.color[0] = glm::vec3(100, 200, 150);
@@ -600,12 +603,12 @@ int main(int argc, char* argv[]) {
 			//if mouse click event happend
 			if (windowEvent.type == SDL_MOUSEBUTTONDOWN) {
 				if (windowEvent.button.button == SDL_BUTTON_LEFT) {
-					printf("left mouse click\n");
+					printf("mouse left click\n");
 					LeftMouseClick = true;
 					mouseClickStartTime= SDL_GetTicks() / 1000.f;
 				}
 				if (windowEvent.button.button == SDL_BUTTON_RIGHT) {
-					printf("right mouse click\n");
+					printf("mouse right click\n");
 					dropKey(cam_pos.x, cam_pos.z, map_data);
 				}
 			}
@@ -641,10 +644,26 @@ int main(int argc, char* argv[]) {
 		timePast = time;
 
 		clickPassTime = time - mouseClickStartTime;
-		//set click status
+		//Check click status
 		if (clickPassTime > clickAnimationTime) {
 			LeftMouseClick = false;
 		}
+
+		//Check hulk status
+		hulkPassTime = time - hulkStartTime;
+		if (hulkPassTime >= hulkGrowTime + hulkMaintainTime + hulkShrinkTime) {
+			hulkMode = false;
+			map_data.data[hulkPotionPosIndex] = 'p';
+		}
+
+		//check jump status
+		jumpPassTime = time - jumpStartTime;
+		if (jumpPassTime >= MaxInAirTime) {
+			inAir = false;
+		}
+
+		//jump or hulk mode will change the camera hight.
+		setCameraHight(time, map_data);
 
 		
 		
@@ -686,8 +705,6 @@ int main(int argc, char* argv[]) {
 		glUseProgram(texturedShader);
 
 		
-		//jump or hulk mode will change the camera hight
-		setCameraHight(time, map_data);
 		
 		
 		
@@ -741,30 +758,25 @@ void setCameraHight(float time, MapFile& map_data)
 {
 	// change camera postion if character is in hulkmode
 	float baseH = human_Base_Hight;
-	float hulkPassTime = time - hulkStartTime;
 
 	if (hulkMode == true) {
 		if (hulkPassTime < hulkGrowTime) {
 			baseH = hulkPassTime * hulkBaseH / hulkGrowTime;
 		}
-		else if (hulkPassTime < hulkMaintainTime) {
+		else if (hulkPassTime < hulkGrowTime + hulkMaintainTime) {
 			baseH = hulkBaseH;
 		}
-		else if (hulkPassTime < hulkMaintainTime + hulkShrinkTime) {
-			baseH = hulkBaseH * (hulkMaintainTime + hulkShrinkTime - hulkPassTime) / hulkShrinkTime;
+		else if (hulkPassTime < hulkGrowTime + hulkMaintainTime + hulkShrinkTime) {
+			baseH = hulkBaseH * (hulkGrowTime + hulkMaintainTime + hulkShrinkTime - hulkPassTime) / hulkShrinkTime;
 		}
 		else {
-			hulkMode = false;
-			map_data.data[hulkPotionPosIndex] = 'p';
+			printf("Something Wrong, program should never reach this point\n");
 		}
 	}
 	//change camera postion if character is inAir (jump)
-	float jumpPassTime = time - jumpStartTime;
-	if (jumpPassTime >= MaxInAirTime) {
-		inAir = false;
-		cam_pos.y = baseH;
-	}
-	else {
+	float jumpHight = 0;
+	
+	if(inAir){
 		float tempX = 0;
 		if (jumpPassTime < HalfMaxInAirTime) {
 			tempX = jumpPassTime;
@@ -773,8 +785,8 @@ void setCameraHight(float time, MapFile& map_data)
 			tempX = MaxInAirTime - jumpPassTime;
 		}
 		jumpHight = jumpMaxHight * tempX / HalfMaxInAirTime;
-		cam_pos.y = baseH + jumpHight;
 	}
+	cam_pos.y = baseH + jumpHight;
 }
 
 // all rendering code goes here
