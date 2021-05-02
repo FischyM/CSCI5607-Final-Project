@@ -1,13 +1,15 @@
-// Mathew Fischbach, CSCI 5607
+// Mathew Fischbach,	CSCI 5607
+// Fan Ding,			CSCI 5607
+// Colin Hommerding,	CSCI 5607
 // Code adapted from Stephen Guy
 
 const char* INSTRUCTIONS = "Press W and S to move forward and backwards\n\
 Press A and D to move left and right.\n\
+Press Space to jump\n\
 Left mouse click to use owned item, right mouse click to drop item.\n\
 Find the goal to win!\n\
 You may find doors blocking your way. Find the key to unlock these doors.\n\
 Press E to drop a key on an open floor\n\
-Press Space to jump\n\
 Press F to change between fullscreen and windowed.\n\
 Press Esc to exit the game.\n";
 
@@ -62,7 +64,7 @@ static int ypos = screenHeight / 2; // = 300 to center the cursor in the window
 //mouse click variables
 float mouseClickStartTime = 0;
 float clickPassTime = 0;
-float clickAnimationTime = 0.3;
+float clickAnimationTime = 0.4;
 bool LeftMouseClick = false;
 
 
@@ -86,6 +88,7 @@ float human_Base_Hight = 0; //human hight
 bool hulkMode = false;
 float hulkBaseH = 0.7; //hulk hight
 float hulkStartTime = 0;
+float hulkPassTime = 0;
 float hulkGrowTime = 1; //animation for grow up
 float hulkShrinkTime = 1; //animation for Shrink
 float hulkMaintainTime = 20; //after 20seconds hulk mode off.
@@ -94,10 +97,10 @@ int hulkPotionPosIndex = 0; //replace potion if hulk mode off
 
 //jump feature parameters
 float jumpStartTime = 0;
+float jumpPassTime = 0;
 float MaxInAirTime = 0.8; //Leave ground to back to ground, total 0.8 second.
 float HalfMaxInAirTime = MaxInAirTime / 2;
 float jumpMaxHight = 1;
-float jumpHight = 0;
 bool inAir = false;
 
 
@@ -249,7 +252,7 @@ int main(int argc, char* argv[]) {
 	//Create a context to draw in
 	SDL_GLContext context = SDL_GL_CreateContext(window);
 
-	//Mouse motion
+	//Set Mouse motion to true
 	SDL_SetRelativeMouseMode(SDL_TRUE);
     
     if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 )
@@ -341,7 +344,7 @@ int main(int argc, char* argv[]) {
 	int numVertsWall = numLines / n;
 	printf("%d, %d\n", numLines, numVertsWall);
 
-	// load model 7 - sphere (Moon?)
+	// load model 7 - sphere (Moon?) Fan: tried to load Moon.obj. But it causes errors
 	modelFile.open("models/sphere.txt");
 	numLines = 0;
 	modelFile >> numLines;
@@ -406,8 +409,8 @@ int main(int argc, char* argv[]) {
 	//******************************************************************* Load Textures *****************************************************//*
 
 
-	//// Allocate Texture 0 (Wood) ///////
-	SDL_Surface* surface = SDL_LoadBMP("textures/wood.bmp");
+	//// Allocate Texture 0 (win) ///////
+	SDL_Surface* surface = SDL_LoadBMP("textures/win.bmp");
 
 	if (surface == NULL) { //If it failed, print the error
 		printf("Error: \"%s\"\n", SDL_GetError()); return 1;
@@ -517,7 +520,7 @@ int main(int argc, char* argv[]) {
 	//******************************************************************* lights source  *****************************************************//*
 
 
-	// set up the moon Problem: not lighting, can't change light color
+	// set up the moon. Fan: the issue is not lighting, and can't change light color
 	Moon.size = 1;
 	Moon.pos[0] = glm::vec3(-30, 30, -30);
 	Moon.color[0] = glm::vec3(100, 200, 150);
@@ -566,10 +569,10 @@ int main(int argc, char* argv[]) {
 	while (!quit) {
 		if (goal_found) {
 			printf("\n\n\n*******************************\n\nCongrats! You found the teapot!\n\n*******************************\n\n\n");
-			quit = true;
+			//quit = true;
 		}
 
-		while (SDL_PollEvent(&windowEvent)) {  //inspect all events in the queue
+		while (SDL_PollEvent(&windowEvent) ) {  //inspect all events in the queue
 			const Uint8* state = SDL_GetKeyboardState(NULL);
 
 
@@ -625,12 +628,12 @@ int main(int argc, char* argv[]) {
 			//if mouse click event happend
 			if (windowEvent.type == SDL_MOUSEBUTTONDOWN) {
 				if (windowEvent.button.button == SDL_BUTTON_LEFT) {
-					printf("left mouse click\n");
+					printf("mouse left click\n");
 					LeftMouseClick = true;
 					mouseClickStartTime= SDL_GetTicks() / 1000.f;
 				}
 				if (windowEvent.button.button == SDL_BUTTON_RIGHT) {
-					printf("right mouse click\n");
+					printf("mouse right click\n");
 					dropKey(cam_pos.x, cam_pos.z, map_data);
 				}
 			}
@@ -660,19 +663,37 @@ int main(int argc, char* argv[]) {
 		cam_dir.y = double(-ypos) / 1000;
 		setCamDirFromAngle(cam_angle);
 
-
+		//******************************************************************* Set character status *************************************************//
 		float time = SDL_GetTicks() / 1000.f;
 		dt = time - timePast;
 		timePast = time;
 
 		clickPassTime = time - mouseClickStartTime;
-		//set click status
+		//Check click status
 		if (clickPassTime > clickAnimationTime) {
 			LeftMouseClick = false;
 		}
 
 
+		//Check hulk status
+		hulkPassTime = time - hulkStartTime;
+		if (hulkPassTime >= hulkGrowTime + hulkMaintainTime + hulkShrinkTime) {
+			hulkMode = false;
+			map_data.data[hulkPotionPosIndex] = 'p';
+		}
 
+		//check jump status
+		jumpPassTime = time - jumpStartTime;
+		if (jumpPassTime >= MaxInAirTime) {
+			inAir = false;
+		}
+
+		//jump or hulk mode will change the camera hight.
+		setCameraHight(time, map_data);
+
+		
+		
+		//******************************************************************* Movement and Event *************************************************//
 
 		// check for collision
 		float new_x = cam_pos.x + v_x * dt;
@@ -702,6 +723,9 @@ int main(int argc, char* argv[]) {
 			dropKey(new_x, new_z, map_data);
 		}
 
+
+		//******************************************************************* Clear and prepare for next frame *************************************************//
+
 		// Clear the screen to default color
 		glClearColor(.0f, 0.0f, 0.0f, 1.0f);
 		//glClearColor(.2f, 0.4f, 0.8f, 1.0f);
@@ -717,6 +741,15 @@ int main(int argc, char* argv[]) {
 
 
 
+
+		//change lookAt view if found the goal
+		if (goal_found) {
+			cam_pos = glm::vec3(0, 30.0f, 0);  // Cam Position
+			cam_dir = glm::vec3(0.3f, -0.9f, 0.3f);  // Look at point
+		}
+		
+		printf("cam_pos :%f, %f, %f\n", cam_pos.x, cam_pos.y, cam_pos.z);
+		printf("cam_dir :%f, %f, %f\n", cam_dir.x, cam_dir.y, cam_dir.z);
 
 		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);  // TODO is this the issue?  //Fan: what issue?
 
@@ -766,30 +799,24 @@ void setCameraHight(float time, MapFile& map_data)
 {
 	// change camera postion if character is in hulkmode
 	float baseH = human_Base_Hight;
-	float hulkPassTime = time - hulkStartTime;
-
 	if (hulkMode == true) {
 		if (hulkPassTime < hulkGrowTime) {
 			baseH = hulkPassTime * hulkBaseH / hulkGrowTime;
 		}
-		else if (hulkPassTime < hulkMaintainTime) {
+		else if (hulkPassTime < hulkGrowTime + hulkMaintainTime) {
 			baseH = hulkBaseH;
 		}
-		else if (hulkPassTime < hulkMaintainTime + hulkShrinkTime) {
-			baseH = hulkBaseH * (hulkMaintainTime + hulkShrinkTime - hulkPassTime) / hulkShrinkTime;
+		else if (hulkPassTime < hulkGrowTime + hulkMaintainTime + hulkShrinkTime) {
+			baseH = hulkBaseH * (hulkGrowTime + hulkMaintainTime + hulkShrinkTime - hulkPassTime) / hulkShrinkTime;
 		}
 		else {
-			hulkMode = false;
-			map_data.data[hulkPotionPosIndex] = 'p';
+			printf("Something Wrong, program should never reach this point\n");
 		}
 	}
+
 	//change camera postion if character is inAir (jump)
-	float jumpPassTime = time - jumpStartTime;
-	if (jumpPassTime >= MaxInAirTime) {
-		inAir = false;
-		cam_pos.y = baseH;
-	}
-	else {
+	float jumpHight = 0;
+	if(inAir){
 		float tempX = 0;
 		if (jumpPassTime < HalfMaxInAirTime) {
 			tempX = jumpPassTime;
@@ -798,8 +825,8 @@ void setCameraHight(float time, MapFile& map_data)
 			tempX = MaxInAirTime - jumpPassTime;
 		}
 		jumpHight = jumpMaxHight * tempX / HalfMaxInAirTime;
-		cam_pos.y = baseH + jumpHight;
 	}
+	cam_pos.y = baseH + jumpHight;
 }
 
 // all rendering code goes here
@@ -815,6 +842,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	SetLights(shaderProgram, point_lights);
 	//printf("after SetLight\n");
 
+	//******************************************************************* Draw Map *****************************************************************//* 
 
 	static bool cam_start = true;
 	//************
@@ -980,13 +1008,17 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				model = glm::translate(model, glm::vec3(i, -0.55, j));
 				model = glm::scale(model, glm::vec3(0.49999, 0.2, 0.49999));
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
-				//Set which texture to use (0 = wood)
+				//Set which texture to use (0 = win)
 				glUniform1i(uniTexID, -1);
 				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
 				glDrawArrays(GL_TRIANGLES, modelStarts[2], modelNumVerts[2]); //(Primitive Type, Start Vertex, Num Verticies
 			}
 		}
 	}
+
+
+	//******************************************************************* Draw Environment *****************************************************************//* 
+
 
 	// draw Moon
 	glm::mat4 model = glm::mat4(1);
@@ -1021,6 +1053,8 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]);
 	}
 
+	//******************************************************************* Draw item in hand *****************************************************************//* 
+
 	// changes due to events
 	// render inventoried key
 	if (activeItem != '0') {
@@ -1048,11 +1082,11 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 
 		int ModelInd = 3;//defalut model is key
-		if (activeItem=='p') {
+		if (activeItem=='p') { //potion
 			model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
 			ModelInd = 5;
 		}
-		if (activeItem == 'h') {
+		if (activeItem == 'h') {//hammer
 			model = glm::scale(model, glm::vec3(.4f, .4f, .4f));
 			model = glm::rotate(model, 3.14f *3/4, glm::vec3(1.0f, 0.0f, 0.0f));
 			ModelInd = 8;
@@ -1064,6 +1098,17 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		glDrawArrays(GL_TRIANGLES, modelStarts[ModelInd], modelNumVerts[ModelInd]);
 	}
 
+	//*******************************************************************  you win *****************************************************************//* 
+	if (goal_found) {
+		glm::mat4 model = glm::mat4(1);
+		model = glm::translate(model, glm::vec3(map_data.height/2, 3, map_data.width/2));
+		model = glm::scale(model, 25.0f*glm::vec3(.2f, .2f, .2f));
+		model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 1.0f));
+		model = glm::rotate(model, timePast * 3.14f / 4, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
+		glUniform1i(uniTexID, 0);
+		glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]); //(Primitive Type, Start Vertex, Num Verticies)
+	}
 }
 
 // Create a NULL-terminated string by reading the provided file
@@ -1270,11 +1315,13 @@ bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data) {
 			int ind = (h - 1) * map_data.width + (w - 1);
 			char map_tile = map_data.data[ind];
 			//printf("x/w {%.4f}/{%d}    z/h {%.4f}/{%d}    map ind/type {%d}/{%c}\n", x, w, z, h, ind, map_tile);
+			
+			// Obstacles, can't pass
 			if (isWall(map_tile) || isDoor(map_tile)||isBreakableWall(map_tile)) {  // is wall
 				if (verbose) printf("can't pass w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
 				return false;
 			}
-			// pickup
+			// pickup key
 			if (isKey(map_tile) ) {
 				// no active key, pick it up and remove from map, can now move
 				if (activeItem == '0') {
@@ -1285,10 +1332,11 @@ bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data) {
 			// we are at the goal
 			if (map_tile == 'G') {
 				// TODO: add in something fancy here
+				map_data.data[ind] = 'O';
 				goal_found = true;
 
 			}
-			// hulk potion
+			// pickup hulk potion
 			if (map_tile == 'p') {
 				if (activeItem == '0' && !hulkMode) {
 					activeItem = 'p';
@@ -1296,7 +1344,7 @@ bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data) {
 					hulkPotionPosIndex = ind;
 				}
 			}
-			//hummer
+			// picup hummer
 			if (map_tile == 'h') {
 				if (activeItem == '0' && hulkMode) {
 					activeItem = 'h';
