@@ -260,7 +260,7 @@ int main(int argc, char* argv[]) {
                         printf( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
                     }
     
-    gMusic = Mix_LoadMUS("/Users/colinhommerding/Desktop/CSCI5607-Final-Project/beat.wav");
+    gMusic = Mix_LoadMUS("groovy.mp3");
         if( gMusic == NULL )
         {
             printf( "Failed to load beat music! SDL_mixer Error: %s\n", Mix_GetError() );
