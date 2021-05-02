@@ -384,8 +384,8 @@ int main(int argc, char* argv[]) {
 	//******************************************************************* Load Textures *****************************************************//* 
 
 
-	//// Allocate Texture 0 (Wood) ///////
-	SDL_Surface* surface = SDL_LoadBMP("textures/wood.bmp");
+	//// Allocate Texture 0 (win) ///////
+	SDL_Surface* surface = SDL_LoadBMP("textures/win.bmp");
 
 	if (surface == NULL) { //If it failed, print the error
 		printf("Error: \"%s\"\n", SDL_GetError()); return 1;
@@ -544,10 +544,10 @@ int main(int argc, char* argv[]) {
 	while (!quit) {
 		if (goal_found) {
 			printf("\n\n\n*******************************\n\nCongrats! You found the teapot!\n\n*******************************\n\n\n");
-			quit = true;
+			//quit = true;
 		}
 
-		while (SDL_PollEvent(&windowEvent)) {  //inspect all events in the queue
+		while (SDL_PollEvent(&windowEvent) ) {  //inspect all events in the queue
 			const Uint8* state = SDL_GetKeyboardState(NULL);
 
 
@@ -638,7 +638,7 @@ int main(int argc, char* argv[]) {
 		cam_dir.y = double(-ypos) / 1000;
 		setCamDirFromAngle(cam_angle);
 
-
+		//******************************************************************* Set character status *************************************************//
 		float time = SDL_GetTicks() / 1000.f;
 		dt = time - timePast;
 		timePast = time;
@@ -667,6 +667,7 @@ int main(int argc, char* argv[]) {
 
 		
 		
+		//******************************************************************* Movement and Event *************************************************//
 
 		// check for collision
 		float new_x = cam_pos.x + v_x * dt;
@@ -696,6 +697,9 @@ int main(int argc, char* argv[]) {
 			dropKey(new_x, new_z, map_data);
 		}
 
+
+		//******************************************************************* Clear and prepare for next frame *************************************************//
+
 		// Clear the screen to default color
 		glClearColor(.0f, 0.0f, 0.0f, 1.0f);
 		//glClearColor(.2f, 0.4f, 0.8f, 1.0f);
@@ -704,11 +708,14 @@ int main(int argc, char* argv[]) {
 
 		glUseProgram(texturedShader);
 
+		//change lookAt view if found the goal
+		if (goal_found) {
+			cam_pos = glm::vec3(0, 30.0f, 0);  // Cam Position
+			cam_dir = glm::vec3(0.3f, -0.9f, 0.3f);  // Look at point
+		}
 		
-		
-		
-		
-
+		printf("cam_pos :%f, %f, %f\n", cam_pos.x, cam_pos.y, cam_pos.z);
+		printf("cam_dir :%f, %f, %f\n", cam_dir.x, cam_dir.y, cam_dir.z);
 
 		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);  // TODO is this the issue?  //Fan: what issue?
 
@@ -758,7 +765,6 @@ void setCameraHight(float time, MapFile& map_data)
 {
 	// change camera postion if character is in hulkmode
 	float baseH = human_Base_Hight;
-
 	if (hulkMode == true) {
 		if (hulkPassTime < hulkGrowTime) {
 			baseH = hulkPassTime * hulkBaseH / hulkGrowTime;
@@ -773,9 +779,9 @@ void setCameraHight(float time, MapFile& map_data)
 			printf("Something Wrong, program should never reach this point\n");
 		}
 	}
+
 	//change camera postion if character is inAir (jump)
 	float jumpHight = 0;
-	
 	if(inAir){
 		float tempX = 0;
 		if (jumpPassTime < HalfMaxInAirTime) {
@@ -802,6 +808,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	SetLights(shaderProgram, point_lights);
 	//printf("after SetLight\n");
 
+	//******************************************************************* Draw Map *****************************************************************//* 
 
 	static bool cam_start = true;
 	//************
@@ -967,13 +974,17 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				model = glm::translate(model, glm::vec3(i, -0.55, j));
 				model = glm::scale(model, glm::vec3(0.49999, 0.2, 0.49999));
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
-				//Set which texture to use (0 = wood)
+				//Set which texture to use (0 = win)
 				glUniform1i(uniTexID, -1);
 				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
 				glDrawArrays(GL_TRIANGLES, modelStarts[2], modelNumVerts[2]); //(Primitive Type, Start Vertex, Num Verticies
 			}
 		}
 	}
+
+
+	//******************************************************************* Draw Environment *****************************************************************//* 
+
 
 	// draw Moon
 	glm::mat4 model = glm::mat4(1);
@@ -1008,6 +1019,8 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]);
 	}
 
+	//******************************************************************* Draw item in hand *****************************************************************//* 
+
 	// changes due to events
 	// render inventoried key
 	if (activeItem != '0') {
@@ -1035,11 +1048,11 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 		
 		int ModelInd = 3;//defalut model is key
-		if (activeItem=='p') {
+		if (activeItem=='p') { //potion
 			model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
 			ModelInd = 5;
 		}
-		if (activeItem == 'h') {
+		if (activeItem == 'h') {//hammer
 			model = glm::scale(model, glm::vec3(.4f, .4f, .4f));
 			model = glm::rotate(model, 3.14f *3/4, glm::vec3(1.0f, 0.0f, 0.0f));
 			ModelInd = 8;
@@ -1051,6 +1064,17 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		glDrawArrays(GL_TRIANGLES, modelStarts[ModelInd], modelNumVerts[ModelInd]);
 	}
 
+	//*******************************************************************  you win *****************************************************************//* 
+	if (goal_found) {
+		glm::mat4 model = glm::mat4(1);
+		model = glm::translate(model, glm::vec3(map_data.height/2, 3, map_data.width/2));
+		model = glm::scale(model, 25.0f*glm::vec3(.2f, .2f, .2f));
+		model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 1.0f));
+		model = glm::rotate(model, timePast * 3.14f / 4, glm::vec3(1.0f, 0.0f, 0.0f));
+		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
+		glUniform1i(uniTexID, 0);
+		glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]); //(Primitive Type, Start Vertex, Num Verticies)
+	}
 }
 
 // Create a NULL-terminated string by reading the provided file
@@ -1257,11 +1281,13 @@ bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data) {
 			int ind = (h - 1) * map_data.width + (w - 1);
 			char map_tile = map_data.data[ind];
 			//printf("x/w {%.4f}/{%d}    z/h {%.4f}/{%d}    map ind/type {%d}/{%c}\n", x, w, z, h, ind, map_tile);
+			
+			// Obstacles, can't pass
 			if (isWall(map_tile) || isDoor(map_tile)||isBreakableWall(map_tile)) {  // is wall
 				if (verbose) printf("can't pass w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
 				return false;
 			}
-			// pickup
+			// pickup key
 			if (isKey(map_tile) ) {
 				// no active key, pick it up and remove from map, can now move
 				if (activeItem == '0') {
@@ -1272,10 +1298,11 @@ bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data) {
 			// we are at the goal
 			if (map_tile == 'G') {
 				// TODO: add in something fancy here
+				map_data.data[ind] = 'O';
 				goal_found = true;
 
 			}
-			// hulk potion
+			// pickup hulk potion
 			if (map_tile == 'p') {
 				if (activeItem == '0' && !hulkMode) {
 					activeItem = 'p';
@@ -1283,7 +1310,7 @@ bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data) {
 					hulkPotionPosIndex = ind;
 				}
 			}
-			//hummer
+			// picup hummer
 			if (map_tile == 'h') {
 				if (activeItem == '0' && hulkMode) {
 					activeItem = 'h';
