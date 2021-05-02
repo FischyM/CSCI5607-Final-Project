@@ -14,7 +14,7 @@ uniform sampler2D tex1;
 
 uniform int texID;
 
-#define MATERIAL_SIZE 18
+#define MATERIAL_SIZE 24
 uniform vec3 inMatsKa[MATERIAL_SIZE];
 uniform vec3 inMatsKs[MATERIAL_SIZE];
 uniform vec3 inMatsKd[MATERIAL_SIZE];
@@ -57,6 +57,7 @@ vec3 DiffuseAndSpecular(vec3 light_pos, vec3 light_col, vec3 mat_Kd, vec3 mat_Ks
 
 void main() {
   vec3 ambientLight = vec3(0.08);
+  vec3 textAmbLight = vec3(0.37);
   vec3 oColor = vec3(0.0,0.0,0.0);
   int matInd = int(round(matIndex));
   Material vert_mat;
@@ -75,59 +76,14 @@ void main() {
     outColor = vec4(oColor, 1);
   }
   else if (texID == 0) {
-    oColor = texture(tex0, texcoord).rgb * ambientLight;
+    oColor = texture(tex0, texcoord).rgb * textAmbLight;
     outColor = vec4(oColor,1);
   }
   else if (texID == 1) {
-    oColor = texture(tex1, texcoord).rgb * ambientLight;
+    oColor = texture(tex1, texcoord).rgb * textAmbLight;
     outColor = vec4(oColor,1);
   }
   else {
     outColor = vec4(1,0,0,1);
   }
-
-//vec3 DiffuseAndSpecular(vec3 light_pos, vec3 light_col, vec3 mat_Kd, vec3 mat_Ks, float mat_Ns, vec3 mat_Ke, vec3 vertNormal, vec3 pos) {
-//  // reduce light intensity via distance
-//  float dist = length(light_pos-pos);
-//  vec3 I = light_col * (1.0/pow(dist,2));
-//  vec3 l = normalize(light_pos-pos);
-//  vec3 n = vertNormal;
-//  vec3 e = normalize(vec3(0,0,0)-pos);  //We know the eye is at (0,0)! (Do you know why?) 
-//  vec3 r = reflect(e,n);
-//
-//  vec3 diffuseC = mat_Kd * I * max(dot(n,l), 0);
-//
-//  float spec = max(dot(r,l),0.0);
-//  if (dot(-l,n) <= 0.0) spec = 0; //No highlight if we are not facing the light
-//  vec3 specC = mat_Ks * I * pow(spec, mat_Ns);
-//
-//  vec3 emC = mat_Ke * I;
-//
-//  vec3 oColor = diffuseC + specC + emC;
-//  return oColor;
-//}
-//
-//
-//void main() {
-//  vec3 ambientLight = vec3(0.7, 0.7, 0.7);
-//  vec3 oColor = vec3(0.0,0.0,0.0);;
-//  
-//  if (texID == -1) {
-//    oColor += inMatsKa[matIndex] * ambientLight;
-//    for (int i=0; i < POINT_LIGHTS_SIZE; i++) {
-//      oColor += DiffuseAndSpecular(pointLightsPOS[i], pointLightsCOLOR[i], inMatsKd[matIndex], inMatsKs[matIndex], inMatsNs[matIndex], inMatsKe[matIndex], vertNormal, pos);
-//    }
-//    outColor = vec4(oColor, 1);
-//  }
-//  else if (texID == 0) {
-//    oColor = texture(tex0, texcoord).rgb* ambientLight;
-//    outColor = vec4(oColor,1);
-//  }
-//  else if (texID == 1) {
-//    oColor = texture(tex1, texcoord).rgb* ambientLight;
-//    outColor = vec4(oColor,1);
-//  }
-//  else {
-//    outColor = vec4(1,0,0,1);
-//  }
 }

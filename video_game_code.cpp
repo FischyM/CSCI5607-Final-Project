@@ -54,7 +54,7 @@ using namespace std;
 
 
 GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName);
-bool DEBUG_ON = true;
+bool DEBUG_ON = false;
 bool fullscreen = false;
 int screenWidth = 800;
 int screenHeight = 600;
@@ -201,7 +201,6 @@ bool isItem(char type) {
 		return false;
 }
 
-
 bool isWall(char type) {
 	return type == 'W';
 }
@@ -224,15 +223,17 @@ bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data);
 
 void wallSlide(float newX, float newZ, MapFile map_data);
 
-float* loadModelOBJwithMTL(const char* file_name, int& numLines, const char* file_nameMTL, vector<Material>& mat_list);
+float* loadModelOBJwithMTL(const char* file_name, int& numLines, const char* file_nameMTL, vector<Material>& mat_list, bool verbose);
 
 void loadModelMTL(const char* file_name, vector<Material>& mat_list);
 
-void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind);
+void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind, int doSet);
 
 void SetLights(int shaderProgram, PointLights point_lights);
 
 void setCameraHight(float time, MapFile& map_data);
+
+void SendMaterialsToShader(int shaderProgram, vector<Material> mat_list);
 
 int main(int argc, char* argv[]) {
 	//SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);  //Initialize Graphics (for OpenGL)
@@ -285,88 +286,81 @@ int main(int argc, char* argv[]) {
 	// light emmitting material - 0
 	loadModelMTL("models/light.mtl", mat_list);
 
-	// key1 is first in mat_list vector - 1
+	// key1 is first in mat_list vector - 1,2,3,4,5
 	loadModelMTL("models/key1.mtl", mat_list);
 	loadModelMTL("models/key2.mtl", mat_list);
 	loadModelMTL("models/key3.mtl", mat_list);
 	loadModelMTL("models/key4.mtl", mat_list);
 	loadModelMTL("models/key5.mtl", mat_list);
 
-	//loadModelMTL("models/Potion.mtl", mat_list);
 
-
-	//Here we will load different model files
-	const int n = 8;
+	//Here we will load three different model files 
+	const int n = 9;
+	int numLines = 0;
 	//Load Model 1 - cube
 	ifstream modelFile;
-	modelFile.open("models/cube.txt");
+	modelFile.open("models/cube-with-material-index.txt");
 	//test
 	if (!modelFile.is_open()) {
 		printf("cube not open\n");
 	}
-	int numLines = 0;
+	numLines = 0;
 	modelFile >> numLines;
 	float* modelCube = new float[numLines];
 	for (int i = 0; i < numLines; i++) {
 		modelFile >> modelCube[i];
 	}
-	printf("%d\n", numLines);
+	printf("cube - %d\n", numLines);
 	int numVertsCube = numLines / n;
 	modelFile.close();
 
 	//Load Model 2 - sword
 	numLines = 0;
-	float* modelSword = loadModelOBJwithMTL("models/sword-tri.obj", numLines, "models/sword-tri.mtl", mat_list);
+	float* modelSword = loadModelOBJwithMTL("models/sword-tri.obj", numLines, "models/sword-tri.mtl", mat_list, true);
 	int numVertsSword = numLines / n;
-	printf("%d, %d\n", numLines, numVertsSword);
+	printf("sword - %d, %d\n", numLines, numVertsSword);
 
 	//Load Model 3 - floor
 	numLines = 0;
-	float* modelFloor = loadModelOBJwithMTL("models/ModularFloor-tri.obj", numLines, "models/ModularFloor-tri.mtl", mat_list);
+	float* modelFloor = loadModelOBJwithMTL("models/ModularFloor-tri.obj", numLines, "models/ModularFloor-tri.mtl", mat_list, true);
 	int numVertsFloor = numLines / n;
-	printf("%d, %d\n", numLines, numVertsFloor);
+	printf("floor - %d, %d\n", numLines, numVertsFloor);
 
 	// load model 4 - key and it's material
 	numLines = 0;
-	float* modelKey1 = loadModelOBJwithMTL("models/key1-tri.obj", numLines, "models/key1-tri.mtl", mat_list);
+	float* modelKey1 = loadModelOBJwithMTL("models/key1-tri.obj", numLines, "models/key1-tri.mtl", mat_list, true);
 	int numVertsKey1 = numLines / n;
-	printf("%d, %d\n", numLines, numVertsKey1);
+	printf("key - %d, %d\n", numLines, numVertsKey1);
 
 	// load model 5 - potion and it's material
 	numLines = 0;
-	float* modelPotion = loadModelOBJwithMTL("models/potion-tri.obj", numLines, "models/potion-tri.mtl", mat_list);
+	float* modelPotion = loadModelOBJwithMTL("models/potion-tri.obj", numLines, "models/potion-tri.mtl", mat_list, true);
 	int numVertsPotion = numLines / n;
-	printf("%d, %d\n", numLines, numVertsPotion);
+	printf("potion - %d, %d\n", numLines, numVertsPotion);
 
 	// load model 6 - crumbling wall
 	numLines = 0;
-	float* modelWall = loadModelOBJwithMTL("models/wall-broken.obj", numLines, "models/wall-broken.mtl", mat_list);
+	float* modelWall = loadModelOBJwithMTL("models/wall-broken.obj", numLines, "models/wall-broken.mtl", mat_list, false);
 	int numVertsWall = numLines / n;
-	printf("%d, %d\n", numLines, numVertsWall);
+	printf("breakable wall - %d, %d\n", numLines, numVertsWall);
 
-	// load model 7 - sphere (Moon?) Fan: tried to load Moon.obj. But it causes errors
-	modelFile.open("models/sphere.txt");
+	// load model 7 - sphere (Moon?) Moon obj fixed, use one with less vertices - Mat
 	numLines = 0;
-	modelFile >> numLines;
-	float* modelSphere = new float[numLines];
-	for (int i = 0; i < numLines; i++) {
-		modelFile >> modelSphere[i];
-	}
-	printf("%d\n", numLines);
+	float* modelSphere = loadModelOBJwithMTL("models/moon-simple-tri.obj", numLines, "models/moon-simple-tri.mtl", mat_list, true);
 	int numVertsSphere = numLines / n;
-	modelFile.close();
+	printf("sphere - %d, %d\n", numLines, numVertsSphere);
 
 	//load model 8 - cloud
 	numLines = 0;
-	float* modelCloud = loadModelOBJwithMTL("models/Cloud2.obj", numLines, "models/Cloud2.mtl", mat_list);
+	float* modelCloud = loadModelOBJwithMTL("models/Cloud2-tri.obj", numLines, "models/Cloud2-tri.mtl", mat_list, true);
 	int numVertsCloud = numLines / n;
-	printf("%d, %d\n", numLines, numVertsCloud);
+	printf("cloud - %d, %d\n", numLines, numVertsCloud);
 
 	//load model 9 - Hammer
 	numLines = 0;
-	float* modelHammer = loadModelOBJwithMTL("models/Hammer_Double.obj", numLines, "models/Hammer_Double.mtl", mat_list);
+	float* modelHammer = loadModelOBJwithMTL("models/Hammer_Double-tri.obj", numLines, "models/Hammer_Double-tri.mtl", mat_list, true);
 	int numVertsHammer = numLines / n;
-	printf("%d, %d\n", numLines, numVertsHammer);
+	printf("hammer - %d, %d\n", numLines, numVertsHammer);
 
 
 	//SJG: I load each model in a different array, then concatenate everything in one big array
@@ -381,9 +375,9 @@ int main(int argc, char* argv[]) {
 	copy(modelKey1, modelKey1 + numVertsKey1 * n,		modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n);
 	copy(modelPotion, modelPotion + numVertsPotion * n, modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n);
 	copy(modelWall, modelWall + numVertsWall * n,		modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n);
-	copy(modelSphere, modelSphere + numVertsSphere * n,	modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n +  numVertsWall * n);
-	copy(modelCloud, modelCloud + numVertsCloud * n,	modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n +numVertsSphere*n);
-	copy(modelHammer, modelHammer + numVertsHammer * n, modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n + numVertsSphere * n + numVertsCloud*n);
+	copy(modelSphere, modelSphere + numVertsSphere * n,	modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n);
+	copy(modelCloud, modelCloud + numVertsCloud * n,	modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n + numVertsSphere * n);
+	copy(modelHammer, modelHammer + numVertsHammer * n, modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n + numVertsSphere * n + numVertsCloud * n);
 
 
 
@@ -464,8 +458,6 @@ int main(int argc, char* argv[]) {
 	//******************************************************************* Shaders *****************************************************//*
 
 
-
-	// TODO: This is where the shader files begin.
 	// https://sites.google.com/site/gsucomputergraphics/educational/how-to-implement-lighting
 	//Build a Vertex Array Object (VAO) to store mapping of shader attributes to VBO
 	GLuint vao;
@@ -476,7 +468,7 @@ int main(int argc, char* argv[]) {
 	GLuint vbo[1];
 	glGenBuffers(1, vbo);  //Create 1 buffer called vbo
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); //Set the vbo as the active array buffer (Only one buffer can be active at a time
-	glBufferData(GL_ARRAY_BUFFER, static_cast<unsigned long long>(totalNumVerts) * 8 * sizeof(float), modelData, GL_STATIC_DRAW); //upload vertices to vbo
+	glBufferData(GL_ARRAY_BUFFER, static_cast<unsigned long long>(totalNumVerts) * n * sizeof(float), modelData, GL_STATIC_DRAW); //upload vertices to vbo
 	//GL_STATIC_DRAW means we won't change the geometry, GL_DYNAMIC_DRAW = geometry changes infrequently
 	//GL_STREAM_DRAW = geom. changes frequently.  This effects which types of GPU memory is used
 
@@ -484,21 +476,21 @@ int main(int argc, char* argv[]) {
 
 	//Tell OpenGL how to set fragment shader input
 	GLint posAttrib = glGetAttribLocation(texturedShader, "position");
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, n * sizeof(float), 0);
 	//Attribute, vals/attrib., type, isNormalized, stride, offset
 	glEnableVertexAttribArray(posAttrib);
 
-	//GLint colAttrib = glGetAttribLocation(texturedShader, "inColor");
-	//glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3*sizeof(float)));
-	//glEnableVertexAttribArray(colAttrib);
+	GLint texAttrib = glGetAttribLocation(texturedShader, "inTexcoord");
+	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, n * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(texAttrib);
 
 	GLint normAttrib = glGetAttribLocation(texturedShader, "inNormal");
-	glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+	glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, n * sizeof(float), (void*)(5 * sizeof(float)));
 	glEnableVertexAttribArray(normAttrib);
 
-	GLint texAttrib = glGetAttribLocation(texturedShader, "inTexcoord");
-	glEnableVertexAttribArray(texAttrib);
-	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	GLint matAttrib = glGetAttribLocation(texturedShader, "inMatIndex");
+	glVertexAttribPointer(matAttrib, 1, GL_FLOAT, GL_FALSE, n * sizeof(float), (void*)(8 * sizeof(float)));
+	glEnableVertexAttribArray(matAttrib);
 
 	GLint uniView = glGetUniformLocation(texturedShader, "view");
 	GLint uniProj = glGetUniformLocation(texturedShader, "proj");
@@ -524,7 +516,7 @@ int main(int argc, char* argv[]) {
 	Moon.size = 1;
 	Moon.pos[0] = glm::vec3(-30, 30, -30);
 	Moon.color[0] = glm::vec3(100, 200, 150);
-	Moon.debug();
+	//Moon.debug();
 
 
 
@@ -534,7 +526,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
 			point_lights.pos[count] = glm::vec3(3 + i * 10, 1, 3 + j * 10);  // remember, y is up
-			point_lights.color[count] = glm::vec3(10, 10, 10);
+			point_lights.color[count] = glm::vec3(3);
 			count++;
 		}
 	}
@@ -559,16 +551,15 @@ int main(int argc, char* argv[]) {
 
 
 
-	for (int i = 0; i < mat_list.size(); i++) {
-		cout << i << " ";
-		mat_list[i].debug();
-	}
-	printf("number of materials right now: %d\n", mat_list.size());
+	//for (int i = 0; i < mat_list.size(); i++) {
+	//	cout << i << " ";
+	//	mat_list[i].debug();
+	//}
+	//printf("number of materials right now: %d\n", mat_list.size());
 
 
 	while (!quit) {
 		if (goal_found) {
-			printf("\n\n\n*******************************\n\nCongrats! You found the teapot!\n\n*******************************\n\n\n");
 			//quit = true;
 		}
 
@@ -719,7 +710,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		if (!hulkMode && activeItem == 'h') {
-			printf("hammer too heavy for humna, so drop it\n");
+			printf("hammer too heavy for human, so drop it\n");
 			dropKey(new_x, new_z, map_data);
 		}
 
@@ -748,10 +739,10 @@ int main(int argc, char* argv[]) {
 			cam_dir = glm::vec3(0.3f, -0.9f, 0.3f);  // Look at point
 		}
 		
-		printf("cam_pos :%f, %f, %f\n", cam_pos.x, cam_pos.y, cam_pos.z);
-		printf("cam_dir :%f, %f, %f\n", cam_dir.x, cam_dir.y, cam_dir.z);
+		//printf("cam_pos :%f, %f, %f\n", cam_pos.x, cam_pos.y, cam_pos.z);
+		//printf("cam_dir :%f, %f, %f\n", cam_dir.x, cam_dir.y, cam_dir.z);
 
-		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);  // TODO is this the issue?  //Fan: what issue?
+		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);
 
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
@@ -836,11 +827,10 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	GLint uniModel = glGetUniformLocation(shaderProgram, "model");
 
 
-	// set a single point light
-	//printf("before SetLight\n");
-	SetLights(shaderProgram, Moon);
-	SetLights(shaderProgram, point_lights);
-	//printf("after SetLight\n");
+	// SetLights(shaderProgram, Moon);  // TODO: Make moon a light source? - Mat
+	SetLights(shaderProgram, point_lights);  // TODO: add in more lights and change positions - Mat
+
+	SendMaterialsToShader(shaderProgram, mat_list);
 
 	//******************************************************************* Draw Map *****************************************************************//* 
 
@@ -870,6 +860,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 				model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
 
+				SetMaterial(shaderProgram, mat_list, 0, 0);
 				//Set which texture to use (1 = brick texture ... bound to GL_TEXTURE1)
 				glUniform1i(uniTexID, 1);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -882,7 +873,8 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				glm::mat4 model = glm::mat4(1);
 				model = glm::translate(model, glm::vec3(i, 0, j));
 				model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-				SetMaterial(shaderProgram, mat_list, 16);
+				SetMaterial(shaderProgram, mat_list, 11, 1);
+				//SetMaterial(shaderProgram, mat_list, 16);
 
 				glUniform1i(uniTexID, -1);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -904,7 +896,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				model = glm::scale(model, glm::vec3(.11f));
 				model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 0.0f));
 
-				SetMaterial(shaderProgram, mat_list, 16);
+				SetMaterial(shaderProgram, mat_list, 0, 0);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 
 				//Set which texture to use (-1 = no texture)
@@ -921,11 +913,11 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 			// Doors
 			else if (map_type == 'A' || map_type == 'B' || map_type == 'C' || map_type == 'D' || map_type == 'E') {
 				// set color
-				if (map_type == 'A') SetMaterial(shaderProgram, mat_list, 1);
-				else if (map_type == 'B') SetMaterial(shaderProgram, mat_list, 2);
-				else if (map_type == 'C') SetMaterial(shaderProgram, mat_list, 3);
-				else if (map_type == 'D') SetMaterial(shaderProgram, mat_list, 4);
-				else SetMaterial(shaderProgram, mat_list, 5);
+				if (map_type == 'A') SetMaterial(shaderProgram, mat_list, 1, 1);
+				else if (map_type == 'B') SetMaterial(shaderProgram, mat_list, 2, 1);
+				else if (map_type == 'C') SetMaterial(shaderProgram, mat_list, 3, 1);
+				else if (map_type == 'D') SetMaterial(shaderProgram, mat_list, 4, 1);
+				else SetMaterial(shaderProgram, mat_list, 5, 1);
 
 
 				glm::mat4 model = glm::mat4(1);
@@ -940,11 +932,11 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 			// Keys
 			else if (map_type == 'a' || map_type == 'b' || map_type == 'c' || map_type == 'd' || map_type == 'e') {
 				// set color
-				if (map_type == 'a') SetMaterial(shaderProgram, mat_list, 1);
-				else if (map_type == 'b') SetMaterial(shaderProgram, mat_list, 2);
-				else if (map_type == 'c') SetMaterial(shaderProgram, mat_list, 3);
-				else if (map_type == 'd') SetMaterial(shaderProgram, mat_list, 4);
-				else SetMaterial(shaderProgram, mat_list, 5);
+				if (map_type == 'a') SetMaterial(shaderProgram, mat_list, 1, 1);
+				else if (map_type == 'b') SetMaterial(shaderProgram, mat_list, 2, 1);
+				else if (map_type == 'c') SetMaterial(shaderProgram, mat_list, 3, 1);
+				else if (map_type == 'd') SetMaterial(shaderProgram, mat_list, 4, 1);
+				else SetMaterial(shaderProgram, mat_list, 5, 1);
 
 
 				glm::mat4 model = glm::mat4(1);
@@ -975,7 +967,8 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 
 				glUniform1i(uniTexID, -1);
-				SetMaterial(shaderProgram, mat_list, 22);
+				SetMaterial(shaderProgram, mat_list, 0, 0);
+				//SetMaterial(shaderProgram, mat_list, 22);
 
 				glDrawArrays(GL_TRIANGLES, modelStarts[8], modelNumVerts[8]); //(Primitive Type, Start Vertex, Num Verticies)
 
@@ -993,7 +986,8 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 
 				glUniform1i(uniTexID, -1);
-				SetMaterial(shaderProgram, mat_list, 14);
+				SetMaterial(shaderProgram, mat_list, 0, 0);
+				//SetMaterial(shaderProgram, mat_list, 14);
 
 				glDrawArrays(GL_TRIANGLES, modelStarts[4], modelNumVerts[4]); //(Primitive Type, Start Vertex, Num Verticies)
 
@@ -1002,7 +996,8 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 			// draw the floor
 			if (draw_floor) {
-				SetMaterial(shaderProgram, mat_list, 11);
+				SetMaterial(shaderProgram, mat_list, 0, 0);
+				//SetMaterial(shaderProgram, mat_list, 11);
 
 				glm::mat4 model = glm::mat4(1);
 				model = glm::translate(model, glm::vec3(i, -0.55, j));
@@ -1026,7 +1021,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	model = glm::scale(model, 50.0f * glm::vec3(0.2f, 0.2f, 0.2f));
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 	glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
-	SetMaterial(shaderProgram, mat_list, 0);
+	SetMaterial(shaderProgram, mat_list, 0, 1);
 	glDrawArrays(GL_TRIANGLES, modelStarts[6], modelNumVerts[6]);
 
 
@@ -1036,7 +1031,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	model = glm::scale(model, 5.0f * glm::vec3(0.2f, 0.2f, 0.2f));
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 	glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
-	SetMaterial(shaderProgram, mat_list, 0);
+	SetMaterial(shaderProgram, mat_list, 0, 1);
 	glDrawArrays(GL_TRIANGLES, modelStarts[7], modelNumVerts[7]);
 
 
@@ -1049,7 +1044,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 		glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
-		SetMaterial(shaderProgram, mat_list, 0);
+		SetMaterial(shaderProgram, mat_list, 0, 1);
 		glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]);
 	}
 
@@ -1059,13 +1054,13 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	// render inventoried key
 	if (activeItem != '0') {
 		// set color
-		if (activeItem == 'a') SetMaterial(shaderProgram, mat_list, 1);
-		else if (activeItem == 'b') SetMaterial(shaderProgram, mat_list, 2);
-		else if (activeItem == 'c') SetMaterial(shaderProgram, mat_list, 3);
-		else if (activeItem == 'd') SetMaterial(shaderProgram, mat_list, 4);
-		else if (activeItem == 'e') SetMaterial(shaderProgram, mat_list, 5);
-		else if (activeItem == 'p') SetMaterial(shaderProgram, mat_list, 14);
-		else if (activeItem == 'h') SetMaterial(shaderProgram, mat_list, 22);
+		if (activeItem == 'a') SetMaterial(shaderProgram, mat_list, 1, 1);
+		else if (activeItem == 'b') SetMaterial(shaderProgram, mat_list, 2, 1);
+		else if (activeItem == 'c') SetMaterial(shaderProgram, mat_list, 3, 1);
+		else if (activeItem == 'd') SetMaterial(shaderProgram, mat_list, 4, 1);
+		else if (activeItem == 'e') SetMaterial(shaderProgram, mat_list, 5, 1);
+		else if (activeItem == 'p') SetMaterial(shaderProgram, mat_list, 14, 0);
+		else if (activeItem == 'h') SetMaterial(shaderProgram, mat_list, 22, 0);
 		else {}
 
 
@@ -1084,7 +1079,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		int ModelInd = 3;//defalut model is key
 		if (activeItem=='p') { //potion
 			model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
-			ModelInd = 5;
+			ModelInd = 4;
 		}
 		if (activeItem == 'h') {//hammer
 			model = glm::scale(model, glm::vec3(.4f, .4f, .4f));
@@ -1331,10 +1326,9 @@ bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data) {
 			}
 			// we are at the goal
 			if (map_tile == 'G') {
-				// TODO: add in something fancy here
 				map_data.data[ind] = 'O';
 				goal_found = true;
-
+				printf("\n\n\n*******************************\n\nCongrats! You found the sword!\n\n*******************************\n\n\n");
 			}
 			// pickup hulk potion
 			if (map_tile == 'p') {
@@ -1344,7 +1338,7 @@ bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data) {
 					hulkPotionPosIndex = ind;
 				}
 			}
-			// picup hummer
+			// pickup hammer
 			if (map_tile == 'h') {
 				if (activeItem == '0' && hulkMode) {
 					activeItem = 'h';
@@ -1533,7 +1527,7 @@ void wallSlide(float newX, float newZ, MapFile map_data) {
 	}
 }
 
-void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind) {
+void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind, int doSet) {
 	Material mat = mat_list.at(ind);
 
 	GLint uniKa = glGetUniformLocation(shaderProgram, "mat.Ka");
@@ -1550,6 +1544,9 @@ void SetMaterial(int shaderProgram, vector<Material> mat_list, int ind) {
 
 	GLint uniNs = glGetUniformLocation(shaderProgram, "mat.Ns");
 	glUniform1f(uniNs, mat.Ns);
+
+	GLint uniMat = glGetUniformLocation(shaderProgram, "useMat");
+	glUniform1i(uniMat, doSet);  // is set to True/False in shader
 }
 
 void SetLights(int shaderProgram, PointLights point_lights) {
@@ -1562,12 +1559,12 @@ void SetLights(int shaderProgram, PointLights point_lights) {
 }
 
 // load .obj type models
-float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* file_nameMTL, vector<Material>& mat_list) {
+float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* file_nameMTL, vector<Material>& mat_list, bool verbose) {
 	// load materials
 	loadModelMTL(file_nameMTL, mat_list);
 
 	// Using the OBJ models from Stephen Guy (https://drive.google.com/drive/u/0/folders/1aRQUoDFDjEUdB-7Ol0cz9Bftv-kCkog-)
-	// it appears that these OBJ models use square faces and not triangles.
+	// it appears that these OBJ models use square faces and not triangles. 
 	// Therefor, I went into blender and converted all faces into triangles
 	FILE* fp = fopen(file_nameOBJ, "r");
 
@@ -1636,12 +1633,9 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 		else if (commandStr == "usemtl") {
 			char mtl[20];
 			sscanf(line, "usemtl %s", mtl);
-			// find material properties and use that too in VAO/VBO TODO
 			for (int i = 0; i < mat_list.size(); i++) {
 				if (strcmp(mat_list[i].newmtl, mtl) == 0) {
 					curr_mat_ind = i;
-					//cout << i << endl;
-					//mat_list[i].debug();
 				}
 			}
 		}
@@ -1649,23 +1643,24 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 
 	fclose(fp);
 
-	const int n = 8;
+	const int n = 9;
 	numLines = vertex_ind.size() * n;  // 3 floats for x,y,z of vertex, 2 for u,v texture coordinates, 3 for vertex normal x,y,z, 1 mat index
 	float* model1 = new float[numLines];
+	if (verbose) {
+		printf("\nnum_tri %d, lines %d, size of vertexInd %d, textureInd %d, normalInd %d, materialInd %d\n", num_tri, numLines, vertex_ind.size(), texture_ind.size(), normal_ind.size(), material_ind.size());
+		printf("size of vertexArr %d, size of textureArr %d, size of normalArr %d\n", vertex_arr.size(), texture_arr.size(), normal_arr.size());
 
-	//printf("num_tri %d, lines %d, size of vertexInd %d, textureInd %d, normalInd %d, materialInd %d\n", num_tri, numLines, vertex_ind.size(), texture_ind.size(), normal_ind.size(), material_ind.size());
-	//printf("size of vertexArr %d, size of textureArr %d, size of normalArr %d\n", vertex_arr.size(), texture_arr.size(), normal_arr.size());
-	//
-	//cout << endl;
-	//for (int i = 0; i < material_ind.size(); i++) {
-	//	int j;
-	//	for (j = 0; j < i; j++)
-	//		if (material_ind[i] == material_ind[j])
-	//			break;
-	//	if (i == j)
-	//		cout << material_ind[i] << " ";
-	//}
-	//cout << endl;
+		cout << "material indices: ";
+		for (int i = 0; i < material_ind.size(); i++) {
+			int j;
+			for (j = 0; j < i; j++)
+				if (material_ind[i] == material_ind[j])
+					break;
+			if (i == j)
+				cout << material_ind[i] << " ";
+		}
+		cout << endl;
+	}
 
 	for (int i = 0; i < vertex_ind.size(); i++) {
 		// vertex x,y,z
@@ -1686,9 +1681,44 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 		model1[(i * n) + 6] = normal_arr[normal_ind[i] - 1].y;
 		model1[(i * n) + 7] = normal_arr[normal_ind[i] - 1].z;
 		// material index
-		//model1[(i * 9) + 8] = material_ind[i];
+		model1[(i * n) + 8] = float(material_ind[i]);  // issue here is that this is an int being allocated to floats pointer
+	}
+	if (verbose) {
+		printf("successfully loaded ");
+	}
+	return model1;
+}
+
+void SendMaterialsToShader(int shaderProgram, vector<Material> mat_list) {
+	const int size = 24;
+	glm::vec3 inMatsKa[size];
+	glm::vec3 inMatsKs[size];
+	glm::vec3 inMatsKd[size];
+	glm::vec3 inMatsKe[size];
+	float inMatsNs[size];
+
+	for (int i = 0; i < size; i++) {
+		Material mat = mat_list[i];
+		inMatsKa[i] = mat.Ka;
+		inMatsKs[i] = mat.Ks;
+		inMatsKd[i] = mat.Kd;
+		inMatsKe[i] = mat.Ke;
+		inMatsNs[i] = mat.Ns;
 	}
 
-	printf("nice, successful obj loaded\n");
-	return model1;
+	GLint uniKa = glGetUniformLocation(shaderProgram, "inMatsKa");
+	glUniform3fv(uniKa, size, glm::value_ptr(inMatsKa[0]));
+
+	GLint uniKs = glGetUniformLocation(shaderProgram, "inMatsKs");
+	glUniform3fv(uniKs, size, glm::value_ptr(inMatsKs[0]));
+
+	GLint uniKd = glGetUniformLocation(shaderProgram, "inMatsKd");
+	glUniform3fv(uniKd, size, glm::value_ptr(inMatsKd[0]));
+
+	GLint uniKe = glGetUniformLocation(shaderProgram, "inMatsKe");
+	glUniform3fv(uniKe, size, glm::value_ptr(inMatsKe[0]));
+
+	GLint uniNs = glGetUniformLocation(shaderProgram, "inMatsNs");
+	glUniform1fv(uniNs, size, inMatsNs);
+
 }
