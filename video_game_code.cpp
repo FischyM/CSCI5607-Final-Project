@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
 	// light emmitting material - 0
 	loadModelMTL("models/light.mtl", mat_list);
 
-	// key1 is first in mat_list vector - 1
+	// key1 is first in mat_list vector - 1-5
 	loadModelMTL("models/key1.mtl", mat_list);
 	loadModelMTL("models/key2.mtl", mat_list);
 	loadModelMTL("models/key3.mtl", mat_list);
@@ -207,6 +207,7 @@ int main(int argc, char* argv[]) {
 
 	//Here we will load three different model files 
 	const int n = 9;
+	int numLines = 0;
 	//Load Model 1 - cube
 	ifstream modelFile;
 	modelFile.open("models/cube-with-material-index.txt");
@@ -214,7 +215,7 @@ int main(int argc, char* argv[]) {
 	if (!modelFile.is_open()) {
 		printf("cube not open\n");
 	}
-	int numLines = 0;
+	numLines = 0;
 	modelFile >> numLines;
 	float* modelCube = new float[numLines];
 	for (int i = 0; i < numLines; i++) {
@@ -224,11 +225,13 @@ int main(int argc, char* argv[]) {
 	int numVertsCube = numLines / n;
 	modelFile.close();
 
+
 	//Load Model 2 - sword
 	numLines = 0;
 	float* modelSword = loadModelOBJwithMTL("models/sword-tri.obj", numLines, "models/sword-tri.mtl", mat_list, false);
 	int numVertsSword = numLines / n;
 	printf("%d, %d\n", numLines, numVertsSword);
+
 
 	//Load Model 3 - floor
 	numLines = 0;
@@ -236,11 +239,13 @@ int main(int argc, char* argv[]) {
 	int numVertsFloor = numLines / n;
 	printf("%d, %d\n", numLines, numVertsFloor);
 
+
 	// load model 4 - key and it's material
 	numLines = 0;
 	float* modelKey1 = loadModelOBJwithMTL("models/key1-tri.obj", numLines, "models/key1-tri.mtl", mat_list, false);
 	int numVertsKey1 = numLines / n;
 	printf("%d, %d\n", numLines, numVertsKey1);
+
 
 	// load model 5 - potion and it's material
 	numLines = 0;
@@ -248,9 +253,10 @@ int main(int argc, char* argv[]) {
 	int numVertsPotion = numLines / n;
 	printf("%d, %d\n", numLines, numVertsPotion);
 
+
 	// load model 6 - crumbling wall
 	numLines = 0;
-	float* modelWall = loadModelOBJwithMTL("models/wall-broken-tri.obj", numLines, "models/wall-broken-tri.mtl", mat_list, true);
+	float* modelWall = loadModelOBJwithMTL("models/wall-broken.obj", numLines, "models/wall-broken.mtl", mat_list, true);
 	int numVertsWall = numLines / n;
 	printf("%d, %d\n", numLines, numVertsWall);
 
@@ -347,7 +353,7 @@ int main(int argc, char* argv[]) {
 	GLuint vbo[1];
 	glGenBuffers(1, vbo);  //Create 1 buffer called vbo
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); //Set the vbo as the active array buffer (Only one buffer can be active at a time
-	glBufferData(GL_ARRAY_BUFFER, static_cast<unsigned long long>(totalNumVerts) * 8 * sizeof(float), modelData, GL_STATIC_DRAW); //upload vertices to vbo
+	glBufferData(GL_ARRAY_BUFFER, static_cast<unsigned long long>(totalNumVerts) * n * sizeof(float), modelData, GL_STATIC_DRAW); //upload vertices to vbo
 	//GL_STATIC_DRAW means we won't change the geometry, GL_DYNAMIC_DRAW = geometry changes infrequently
 	//GL_STREAM_DRAW = geom. changes frequently.  This effects which types of GPU memory is used
 
@@ -390,7 +396,7 @@ int main(int argc, char* argv[]) {
 	int count = 0;
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
-			point_lights.pos[count] = glm::vec3(3 + i * 10, 2, 3 + j * 10);  // remember, y is up
+			point_lights.pos[count] = glm::vec3(2 + i * 10, 2, 2 + j * 10);  // remember, y is up
 			point_lights.color[count] = glm::vec3(10, 10, 10);
 			count++;
 		}
@@ -398,7 +404,7 @@ int main(int argc, char* argv[]) {
 	point_lights.size = count;
 	point_lights.debug();
 
-
+	glDisable(GL_FRAMEBUFFER_SRGB);
 
 	//Event Loop (Loop forever processing each event as fast as possible)
 	SDL_Event windowEvent;
@@ -430,11 +436,11 @@ int main(int argc, char* argv[]) {
 
 
 	
-	//for (int i = 0; i < mat_list.size(); i++) {
-	//	cout << i << " ";
-	//	mat_list[i].debug();
-	//}
-	//printf("number of materials right now: %d\n", mat_list.size());
+	for (int i = 0; i < mat_list.size(); i++) {
+		cout << i << " ";
+		mat_list[i].debug();
+	}
+	printf("number of materials right now: %d\n", mat_list.size());
 
 
 	while (!quit) {
@@ -603,6 +609,7 @@ int main(int argc, char* argv[]) {
 	delete[] modelFloor;
 	delete[] modelKey1;
 	delete[] modelPotion;
+	delete[] modelWall;
 	delete[] modelData;
 	delete map_data.data;
 	glDeleteProgram(texturedShader);
@@ -663,7 +670,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				glm::mat4 model = glm::mat4(1);
 				model = glm::translate(model, glm::vec3(i, 0, j));
 				model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-				SetMaterial(shaderProgram, mat_list, 5, 1);
+				SetMaterial(shaderProgram, mat_list, 11, 1);
 
 				glUniform1i(uniTexID, -1);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
