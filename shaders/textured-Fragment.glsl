@@ -1,8 +1,9 @@
 #version 150 core
 
-#define POINT_LIGHTS_SIZE 9
+#define POINT_LIGHTS_SIZE 16
 in vec3 pointLightsPOS[POINT_LIGHTS_SIZE];
-in vec3 pointLightsCOLOR[POINT_LIGHTS_SIZE];
+//in vec3 pointLightsCOLOR[POINT_LIGHTS_SIZE];
+uniform vec3 inPointLightsCOLOR[POINT_LIGHTS_SIZE];
 
 in vec3 vertNormal;
 in vec3 pos;
@@ -33,7 +34,7 @@ uniform Material mat;  // TODO: will need to remove this as well as in drawGeome
 
 out vec4 outColor;
 
-vec3 DiffuseAndSpecular(vec3 light_pos, vec3 light_col, vec3 mat_Kd, vec3 mat_Ks, float mat_Ns, vec3 mat_Ke, vec3 vertNormal, vec3 pos) {
+vec3 DiffuseAndSpecular(vec3 light_pos, vec3 light_col, vec3 mat_Kd, vec3 mat_Ks, float mat_Ns, vec3 vertNormal, vec3 pos) {
   // reduce light intensity via distance
   float dist = length(light_pos-pos);
   vec3 I = light_col * (1.0/pow(dist,2));
@@ -48,9 +49,7 @@ vec3 DiffuseAndSpecular(vec3 light_pos, vec3 light_col, vec3 mat_Kd, vec3 mat_Ks
   if (dot(-l,n) <= 0.0) spec = 0; //No highlight if we are not facing the light
   vec3 specC = mat_Ks * I * pow(spec, mat_Ns);
 
-  vec3 emC = mat_Ke * I;
-
-  vec3 oColor = diffuseC + specC + emC;
+  vec3 oColor = diffuseC + specC;
   return oColor;
 }
 
@@ -70,8 +69,9 @@ void main() {
   if (texID == -1) {
     oColor += vert_mat.Ka * ambientLight;
     for (int i=0; i < POINT_LIGHTS_SIZE; i++) {
-      oColor += DiffuseAndSpecular(pointLightsPOS[i], pointLightsCOLOR[i], vert_mat.Kd, vert_mat.Ks, vert_mat.Ns, vert_mat.Ke, vertNormal, pos);
+      oColor += DiffuseAndSpecular(pointLightsPOS[i], inPointLightsCOLOR[i], vert_mat.Kd, vert_mat.Ks, vert_mat.Ns, vertNormal, pos);
     }
+    oColor += vert_mat.Ke;
     oColor = min(oColor, vec3(1.0));
     outColor = vec4(oColor, 1);
   }

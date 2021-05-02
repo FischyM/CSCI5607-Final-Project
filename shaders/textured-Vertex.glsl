@@ -9,12 +9,12 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 proj;
 
-#define POINT_LIGHTS_SIZE 9
+#define POINT_LIGHTS_SIZE 16
 uniform vec3 inPointLightsPOS[POINT_LIGHTS_SIZE];
-uniform vec3 inPointLightsCOLOR[POINT_LIGHTS_SIZE];
+//uniform vec3 inPointLightsCOLOR[POINT_LIGHTS_SIZE];
 
 out vec3 pointLightsPOS[POINT_LIGHTS_SIZE];
-out vec3 pointLightsCOLOR[POINT_LIGHTS_SIZE];
+//out vec3 pointLightsCOLOR[POINT_LIGHTS_SIZE];
 
 out vec3 vertNormal;
 out vec3 pos;
@@ -27,7 +27,7 @@ void main() {
 
    for (int i=0; i < POINT_LIGHTS_SIZE; i++) {
       pointLightsPOS[i] = (view * vec4(inPointLightsPOS[i],1.0)).xyz;
-      pointLightsCOLOR[i] = inPointLightsCOLOR[i];
+      //pointLightsCOLOR[i] = inPointLightsCOLOR[i];
    }
 
    vec4 norm4 = transpose(inverse(view*model)) * vec4(inNormal,0.0);
