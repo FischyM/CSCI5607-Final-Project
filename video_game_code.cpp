@@ -23,12 +23,14 @@ Press Esc to exit the game.\n";
 #ifdef __APPLE__
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include <SDL2_mixer/SDL_mixer.h>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #else
 #include <SDL.h>
 #include <SDL_opengl.h>
+#include <SDL_mixer.h>
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
@@ -89,7 +91,7 @@ float hulkShrinkTime = 1; //animation for Shrink
 float hulkMaintainTime = 20; //after 20seconds hulk mode off.
 int hulkPotionPosIndex = 0; //replace potion if hulk mode off
 
-							
+
 //jump feature parameters
 float jumpStartTime = 0;
 float MaxInAirTime = 0.8; //Leave ground to back to ground, total 0.8 second.
@@ -151,6 +153,8 @@ struct PointLights {
 PointLights point_lights;
 PointLights Moon;
 PointLights Stars;
+
+Mix_Music *gMusic = NULL;
 
 struct MapFile {
 	int width = 0;
@@ -228,7 +232,11 @@ void SetLights(int shaderProgram, PointLights point_lights);
 void setCameraHight(float time, MapFile& map_data);
 
 int main(int argc, char* argv[]) {
-	SDL_Init(SDL_INIT_VIDEO);  //Initialize Graphics (for OpenGL)
+	//SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);  //Initialize Graphics (for OpenGL)
+    if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO ) < 0 )
+        {
+            printf( "SDL could not initialize! SDL Error: %s\n", SDL_GetError() );
+        }
 
 	//Ask SDL to get a recent version of OpenGL (3.2 or greater)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -243,6 +251,19 @@ int main(int argc, char* argv[]) {
 
 	//Mouse motion
 	SDL_SetRelativeMouseMode(SDL_TRUE);
+    
+    if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 )
+                    {
+                        printf( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
+                    }
+    
+    gMusic = Mix_LoadMUS("/Users/colinhommerding/Desktop/CSCI5607-Final-Project/beat.wav");
+        if( gMusic == NULL )
+        {
+            printf( "Failed to load beat music! SDL_mixer Error: %s\n", Mix_GetError() );
+        }
+    
+    Mix_PlayMusic( gMusic, -1 );
 
 	//Load OpenGL extentions with GLAD
 	if (gladLoadGLLoader(SDL_GL_GetProcAddress)) {
@@ -256,7 +277,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	//******************************************************************* Load Models *****************************************************//* 
+	//******************************************************************* Load Models *****************************************************//*
 
 	// light emmitting material - 0
 	loadModelMTL("models/light.mtl", mat_list);
@@ -271,7 +292,7 @@ int main(int argc, char* argv[]) {
 	//loadModelMTL("models/Potion.mtl", mat_list);
 
 
-	//Here we will load different model files 
+	//Here we will load different model files
 	const int n = 8;
 	//Load Model 1 - cube
 	ifstream modelFile;
@@ -320,7 +341,7 @@ int main(int argc, char* argv[]) {
 	int numVertsWall = numLines / n;
 	printf("%d, %d\n", numLines, numVertsWall);
 
-	// load model 7 - sphere (Moon?) 
+	// load model 7 - sphere (Moon?)
 	modelFile.open("models/sphere.txt");
 	numLines = 0;
 	modelFile >> numLines;
@@ -382,7 +403,7 @@ int main(int argc, char* argv[]) {
 
 
 
-	//******************************************************************* Load Textures *****************************************************//* 
+	//******************************************************************* Load Textures *****************************************************//*
 
 
 	//// Allocate Texture 0 (Wood) ///////
@@ -437,7 +458,7 @@ int main(int argc, char* argv[]) {
 	//// End Allocate Texture ///////
 
 
-	//******************************************************************* Shaders *****************************************************//* 
+	//******************************************************************* Shaders *****************************************************//*
 
 
 
@@ -458,7 +479,7 @@ int main(int argc, char* argv[]) {
 
 	int texturedShader = InitShader("shaders/textured-Vertex.glsl", "shaders/textured-Fragment.glsl");
 
-	//Tell OpenGL how to set fragment shader input 
+	//Tell OpenGL how to set fragment shader input
 	GLint posAttrib = glGetAttribLocation(texturedShader, "position");
 	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 0);
 	//Attribute, vals/attrib., type, isNormalized, stride, offset
@@ -479,21 +500,21 @@ int main(int argc, char* argv[]) {
 	GLint uniView = glGetUniformLocation(texturedShader, "view");
 	GLint uniProj = glGetUniformLocation(texturedShader, "proj");
 
-	glBindVertexArray(0); //Unbind the VAO in case we want to create a new one	
+	glBindVertexArray(0); //Unbind the VAO in case we want to create a new one
 
 	glEnable(GL_DEPTH_TEST);
 
 	printf("%s\n", INSTRUCTIONS);
 
 
-	//******************************************************************* Maps  *****************************************************//* 
+	//******************************************************************* Maps  *****************************************************//*
 
 	// get the map file data
 	MapFile map_data = MapFile();
 	loadMapFile("maps/complicated.txt", map_data);  // test_with_doors complicated
 
 
-	//******************************************************************* lights source  *****************************************************//* 
+	//******************************************************************* lights source  *****************************************************//*
 
 
 	// set up the moon Problem: not lighting, can't change light color
@@ -518,7 +539,7 @@ int main(int argc, char* argv[]) {
 	point_lights.debug();
 
 
-	//******************************************************************* Events  *****************************************************//* 
+	//******************************************************************* Events  *****************************************************//*
 
 
 
@@ -559,7 +580,7 @@ int main(int argc, char* argv[]) {
 				quit = true; //Exit event loop
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_f) { //If "f" is pressed
 				fullscreen = !fullscreen;
-				SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Toggle fullscreen 
+				SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Toggle fullscreen
 			}
 			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_SPACE && inAir == false) { // if "space" is pressed and character is not in air (character on ground)
 				jumpStartTime = SDL_GetTicks() / 1000.f;
@@ -618,8 +639,8 @@ int main(int argc, char* argv[]) {
 		float v_x = 0.0;
 		float v_z = 0.0;
 		float w = 0.0;
-		// perform movements 
-		if (is_w) {  // If "w key" is pressed 
+		// perform movements
+		if (is_w) {  // If "w key" is pressed
 			v_x = v_x + cam_speed * cam_dir.x * accel;
 			v_z = v_z + cam_speed * cam_dir.z * accel;
 		}
@@ -650,8 +671,8 @@ int main(int argc, char* argv[]) {
 			LeftMouseClick = false;
 		}
 
-		
-		
+
+
 
 		// check for collision
 		float new_x = cam_pos.x + v_x * dt;
@@ -689,12 +710,12 @@ int main(int argc, char* argv[]) {
 
 		glUseProgram(texturedShader);
 
-		
+
 		//jump or hulk mode will change the camera hight
 		setCameraHight(time, map_data);
-		
-		
-		
+
+
+
 
 
 		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);  // TODO is this the issue?  //Fan: what issue?
@@ -809,7 +830,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	// breakable wall 5
 	// modelSphere;	6
 	// modelCloud; 7
-	// modelHammer; 8 
+	// modelHammer; 8
 	for (int j = 0; j < map_data.height; j++) {
 		for (int i = 0; i < map_data.width; i++) {
 			char map_type = map_data.data[j * map_data.width + i];
@@ -1025,7 +1046,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		model = glm::rotate(model, -cam_angle + 3.14f / 4, glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, -3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
 
-		
+
 		int ModelInd = 3;//defalut model is key
 		if (activeItem=='p') {
 			model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
@@ -1196,19 +1217,19 @@ void loadMapFile(const char* file_name, MapFile& map_data) {
 }
 
 void CheckClickEvent(float x, float z, MapFile map_data) {
-	
+
 	vector<int> bounds = { -1, 1 };
 	for (auto dx : bounds) {
 		for (auto dz : bounds) {
 			int w = ceil(x + char_Event_radius * dx);
 			int h = ceil(z + char_Event_radius * dz);
 			if (w < 1 || h < 1 || w > map_data.width || h > map_data.height) { continue; }
-			
+
 			int ind = (h - 1) * map_data.width + (w - 1);
 			char map_tile = map_data.data[ind];
 
 			//open door
-			if (isDoor(map_tile)) {  // if it's a door 
+			if (isDoor(map_tile)) {  // if it's a door
 				if (doorToKey[map_tile] == activeItem) {  //and you have the right key
 					// remove key and remove door, now you can move
 					activeItem = '0';
@@ -1222,7 +1243,7 @@ void CheckClickEvent(float x, float z, MapFile map_data) {
 				hulkMode = true;
 				hulkStartTime = SDL_GetTicks() / 1000.f;
 			}
-			
+
 			// break wall
 			if (isBreakableWall(map_tile) && hulkMode && activeItem=='h' ) {
 				map_data.data[ind] = 'O';
@@ -1498,7 +1519,7 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 	loadModelMTL(file_nameMTL, mat_list);
 
 	// Using the OBJ models from Stephen Guy (https://drive.google.com/drive/u/0/folders/1aRQUoDFDjEUdB-7Ol0cz9Bftv-kCkog-)
-	// it appears that these OBJ models use square faces and not triangles. 
+	// it appears that these OBJ models use square faces and not triangles.
 	// Therefor, I went into blender and converted all faces into triangles
 	FILE* fp = fopen(file_nameOBJ, "r");
 
