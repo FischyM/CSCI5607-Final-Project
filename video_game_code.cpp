@@ -13,7 +13,7 @@ Press E to drop a key on an open floor\n\
 Press F to change between fullscreen and windowed.\n\
 Press Esc to exit the game.\n";
 
-//Mac OS build: g++ video_game_code.cpp -x c glad/glad.c -g -F/Library/Frameworks -framework SDL2 -framework OpenGL -o FinalProject
+//Mac OS build: g++ -std=c++11 video_game_code.cpp glad/glad.c -F/Library/Frameworks -framework SDL2 -framework OpenGL -o FinalProject
 //Linux build:  g++ video_game_code.cpp -x c glad/glad.c -g -lSDL2 -lSDL2main -lGL -ldl -I/usr/include/SDL2/ -o FinalProject
 
 // For Visual Studios
@@ -25,16 +25,20 @@ Press Esc to exit the game.\n";
 #ifdef __APPLE__
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #else
 #include <SDL.h>
 #include <SDL_opengl.h>
+#include <glm.hpp>
+#include <gtc/matrix_transform.hpp>
+#include <gtc/type_ptr.hpp>
 #endif
 #include <cstdio>
 
 #define GLM_FORCE_RADIANS
-#include <glm.hpp>
-#include <gtc/matrix_transform.hpp>
-#include <gtc/type_ptr.hpp>
+
 
 #include <cstdio>
 #include <iostream>
