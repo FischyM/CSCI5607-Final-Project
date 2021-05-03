@@ -141,8 +141,8 @@ struct Material {
 vector<Material> mat_list;
 
 struct PointLights {
-	glm::vec3 pos[36];
-	glm::vec3 color[36];
+	glm::vec3 pos[16];
+	glm::vec3 color[16];
 	int size;
 	void debug() {
 		printf("total point lights: %d\n", size);
@@ -523,9 +523,9 @@ int main(int argc, char* argv[]) {
 
 	// set up multiple point lights
 	int count = 0;
-	for (int i = 0; i < 3; i++) {
-		for (int j = 0; j < 3; j++) {
-			point_lights.pos[count] = glm::vec3(3 + i * 10, 1, 3 + j * 10);  // remember, y is up
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			point_lights.pos[count] = glm::vec3(2 + i * 7, 1, 2 + j * 7);  // remember, y is up
 			point_lights.color[count] = glm::vec3(3);
 			count++;
 		}
