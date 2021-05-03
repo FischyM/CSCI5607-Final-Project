@@ -827,7 +827,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	GLint uniModel = glGetUniformLocation(shaderProgram, "model");
 
 
-	// SetLights(shaderProgram, Moon);  // TODO: Make moon a light source? - Mat
+	// SetLights(shaderProgram, Moon);  // TODO: Make moon a light source? - Mat        //Yes! Moonlight will be awesome, and I am thinking adding stars as well. - Fan
 	SetLights(shaderProgram, point_lights);  // TODO: add in more lights and change positions - Mat
 
 	SendMaterialsToShader(shaderProgram, mat_list);
@@ -1064,7 +1064,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		else {}
 
 
-		// Add animation for hold item
+		// Add click animation for hold item
 		float time = SDL_GetTicks() / 1000.f;
 		glm::mat4 model = glm::mat4(1);
 		model = glm::translate(model, glm::vec3(cam_pos.x + cam_dir.x / 2, -0.1 + cam_pos.y, cam_pos.z + cam_dir.z / 2));
@@ -1094,6 +1094,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	}
 
 	//*******************************************************************  you win *****************************************************************//* 
+	//rendering a rotating cute says "you win!"
 	if (goal_found) {
 		glm::mat4 model = glm::mat4(1);
 		model = glm::translate(model, glm::vec3(map_data.height/2, 3, map_data.width/2));
