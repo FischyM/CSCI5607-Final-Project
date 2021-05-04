@@ -103,6 +103,9 @@ float HalfMaxInAirTime = MaxInAirTime / 2;
 float jumpMaxHight = 1;
 bool inAir = false;
 
+//stars
+vector<pair<int, int>> starsVec;
+int StarAmount = 40;
 
 
 // door:key colors
@@ -155,7 +158,6 @@ struct PointLights {
 
 PointLights point_lights;
 PointLights Moon;
-PointLights Stars;
 
 Mix_Music *gMusic = NULL;
 
@@ -350,11 +352,11 @@ int main(int argc, char* argv[]) {
 	int numVertsSphere = numLines / n;
 	printf("sphere - %d, %d\n", numLines, numVertsSphere);
 
-	//load model 8 - cloud
+	//load model 8 - Star
 	numLines = 0;
-	float* modelCloud = loadModelOBJwithMTL("models/Cloud2-tri.obj", numLines, "models/Cloud2-tri.mtl", mat_list, true);
-	int numVertsCloud = numLines / n;
-	printf("cloud - %d, %d\n", numLines, numVertsCloud);
+	float* modelStar = loadModelOBJwithMTL("models/Star.obj", numLines, "models/Star.mtl", mat_list, true);
+	int numVertsStar = numLines / n;
+	printf("Star - %d, %d\n", numLines, numVertsStar);
 
 	//load model 9 - Hammer
 	numLines = 0;
@@ -367,7 +369,7 @@ int main(int argc, char* argv[]) {
 	// This structure works, but there is room for improvement here. Eg., you should store the start
 	// and end of each model a data structure or array somewhere.
 	//Concatenate model arrays
-	float* modelData = new float[(numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere +numVertsCloud +numVertsHammer) * n];
+	float* modelData = new float[(numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere +numVertsStar +numVertsHammer) * n];
 	//float* tracker = modelData;
 	copy(modelCube, modelCube + numVertsCube * n,		modelData);
 	copy(modelSword, modelSword + numVertsSword * n,	modelData + numVertsCube * n);
@@ -376,12 +378,12 @@ int main(int argc, char* argv[]) {
 	copy(modelPotion, modelPotion + numVertsPotion * n, modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n);
 	copy(modelWall, modelWall + numVertsWall * n,		modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n);
 	copy(modelSphere, modelSphere + numVertsSphere * n,	modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n);
-	copy(modelCloud, modelCloud + numVertsCloud * n,	modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n + numVertsSphere * n);
-	copy(modelHammer, modelHammer + numVertsHammer * n, modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n + numVertsSphere * n + numVertsCloud * n);
+	copy(modelStar, modelStar + numVertsStar * n,	modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n + numVertsSphere * n);
+	copy(modelHammer, modelHammer + numVertsHammer * n, modelData + numVertsCube * n + numVertsSword * n + numVertsFloor * n + numVertsKey1 * n + numVertsPotion * n + numVertsWall * n + numVertsSphere * n + numVertsStar * n);
 
 
 
-	int totalNumVerts = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere + numVertsCloud + numVertsHammer;
+	int totalNumVerts = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere + numVertsStar + numVertsHammer;
 	int startVertCube = 0;  //The cube is the first model in the VBO
 	int startVertSword = numVertsCube; //The sword starts right after the cube
 	int startVertFloor = numVertsCube + numVertsSword; //The floor starts right after the sword
@@ -389,14 +391,14 @@ int main(int argc, char* argv[]) {
 	int startPotion = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1;
 	int startWall = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion;
 	int startSphere = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall;
-	int startCloud = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall +numVertsSphere;
-	int startHammer = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere +numVertsCloud;
+	int startStar = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall +numVertsSphere;
+	int startHammer = numVertsCube + numVertsSword + numVertsFloor + numVertsKey1 + numVertsPotion + numVertsWall + numVertsSphere +numVertsStar;
 
 
 
 	// use these for DrawGeometry, its too cumbersome to add all of them
-	vector<int> modelNumVerts = { numVertsCube, numVertsSword, numVertsFloor, numVertsKey1, numVertsPotion, numVertsWall ,numVertsSphere, numVertsCloud, numVertsHammer };
-	vector<int> modelStarts = { startVertCube, startVertSword, startVertFloor, startVertKey, startPotion, startWall, startSphere, startCloud, startHammer };
+	vector<int> modelNumVerts = { numVertsCube, numVertsSword, numVertsFloor, numVertsKey1, numVertsPotion, numVertsWall ,numVertsSphere, numVertsStar, numVertsHammer };
+	vector<int> modelStarts = { startVertCube, startVertSword, startVertFloor, startVertKey, startPotion, startWall, startSphere, startStar, startHammer };
 
 
 
@@ -509,17 +511,22 @@ int main(int argc, char* argv[]) {
 	loadMapFile("maps/complicated.txt", map_data);  // test_with_doors complicated
 
 
-	//******************************************************************* lights source  *****************************************************//*
+	//******************************************************************* Environment  *****************************************************//*
 
 
-	// set up the moon. Fan: the issue is not lighting, and can't change light color
+	// set up the moon. Fan: It will be better if Moon should be recognized as a moon. 
 	Moon.size = 1;
-	Moon.pos[0] = glm::vec3(-30, 30, -30);
+	Moon.pos[0] = glm::vec3(-30, 70, -30);
 	Moon.color[0] = glm::vec3(100, 200, 150);
 	//Moon.debug();
 
 
-
+	//stars
+	for (int i = 0; i < StarAmount; i++) {
+		int StarX = rand() % 200 - 100;
+		int StarY = rand() % 200 - 100;
+		starsVec.push_back(make_pair(StarX, StarY));
+	}
 
 	// set up multiple point lights
 	int count = 0;
@@ -772,7 +779,7 @@ int main(int argc, char* argv[]) {
 	delete[] modelPotion;
 	delete[] modelWall;
 	delete[] modelSphere;
-	delete[] modelCloud;
+	delete[] modelStar;
 	delete[] modelHammer;
 	delete[] modelData;
 	delete map_data.data;
@@ -827,7 +834,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	GLint uniModel = glGetUniformLocation(shaderProgram, "model");
 
 
-	// SetLights(shaderProgram, Moon);  // TODO: Make moon a light source? - Mat        //Yes! Moonlight will be awesome, and I am thinking adding stars as well. - Fan
+	// SetLights(shaderProgram, Moon);  // TODO: Make moon a light source? - Mat        //it's will be great if the moon to be realistic.  - Fan
 	SetLights(shaderProgram, point_lights);  // TODO: add in more lights and change positions - Mat
 
 	SendMaterialsToShader(shaderProgram, mat_list);
@@ -847,7 +854,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	// modelPotion; 4
 	// breakable wall 5
 	// modelSphere;	6
-	// modelCloud; 7
+	// modelStar; 7
 	// modelHammer; 8
 	for (int j = 0; j < map_data.height; j++) {
 		for (int i = 0; i < map_data.width; i++) {
@@ -1025,28 +1032,34 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	glDrawArrays(GL_TRIANGLES, modelStarts[6], modelNumVerts[6]);
 
 
-	// draw cloud
-	model = glm::mat4(1);
-	model = glm::translate(model, glm::vec3(20,10,-20));
-	model = glm::scale(model, 5.0f * glm::vec3(0.2f, 0.2f, 0.2f));
-	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
-	glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
-	SetMaterial(shaderProgram, mat_list, 0, 1);
-	glDrawArrays(GL_TRIANGLES, modelStarts[7], modelNumVerts[7]);
-
-
-	// draw lights
-	for (int i = 0; i < point_lights.size; i++) {
-		// for each light, draw them as a square
-		glm::mat4 model = glm::mat4(1);
-		model = glm::translate(model, point_lights.pos[i]);
-		model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
-
+	// draw Star
+	for (int i = 0; i < starsVec.size(); i++) {
+		int locaX = starsVec[i].first;
+		int locaZ = starsVec[i].second;
+		model = glm::mat4(1);
+		model = glm::translate(model, glm::vec3(locaX, 30, locaZ));
+		model = glm::scale(model, sin(timePast/50*i)*5.0f * glm::vec3(0.2f, 0.2f, 0.2f));
+		model = glm::rotate(model, 3.14f  /4, glm::vec3(1.0f, 0.0f, 0.0f));
+		//model = glm::rotate(model, timePast * 3.14f * i / 80, glm::vec3(0.0f, 1.0f, 0.0f));
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 		glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
 		SetMaterial(shaderProgram, mat_list, 0, 1);
-		glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]);
+		glDrawArrays(GL_TRIANGLES, modelStarts[7], modelNumVerts[7]);
 	}
+
+
+	// draw lights
+	//for (int i = 0; i < point_lights.size; i++) {
+	//	// for each light, draw them as a square
+	//	glm::mat4 model = glm::mat4(1);
+	//	model = glm::translate(model, point_lights.pos[i]);
+	//	model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
+
+	//	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
+	//	glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
+	//	SetMaterial(shaderProgram, mat_list, 0, 1);
+	//	glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]);
+	//}
 
 	//******************************************************************* Draw item in hand *****************************************************************//* 
 
