@@ -238,16 +238,21 @@ void setCameraHight(float time, MapFile& map_data);
 void SendMaterialsToShader(int shaderProgram, vector<Material> mat_list);
 
 int main(int argc, char* argv[]) {
+
 	//SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);  //Initialize Graphics (for OpenGL)
     if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO ) < 0 )
         {
             printf( "SDL could not initialize! SDL Error: %s\n", SDL_GetError() );
         }
+	// add in multi-sampling
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 2);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
 
 	//Ask SDL to get a recent version of OpenGL (3.2 or greater)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+
 
 	//Create a window (offsetx, offsety, width, height, flags)
 	SDL_Window* window = SDL_CreateWindow("My OpenGL Program", 100, 100, screenWidth, screenHeight, SDL_WINDOW_OPENGL);
@@ -282,6 +287,8 @@ int main(int argc, char* argv[]) {
 		printf("ERROR: Failed to initialize OpenGL context.\n");
 		return -1;
 	}
+
+	
 
 	//******************************************************************* Load Models *****************************************************//*
 
@@ -498,8 +505,6 @@ int main(int argc, char* argv[]) {
 	GLint uniProj = glGetUniformLocation(texturedShader, "proj");
 
 	glBindVertexArray(0); //Unbind the VAO in case we want to create a new one
-
-	glEnable(GL_DEPTH_TEST);
 
 	printf("%s\n", INSTRUCTIONS);
 
@@ -767,6 +772,10 @@ int main(int argc, char* argv[]) {
 
 		glBindVertexArray(vao);
 		drawGeometry(texturedShader, modelNumVerts, modelStarts, map_data);
+		
+		glEnable(GL_MULTISAMPLE);
+
+		glEnable(GL_DEPTH_TEST);
 
 		SDL_GL_SwapWindow(window); //Double buffering
 	}
@@ -1028,7 +1037,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	model = glm::scale(model, 50.0f * glm::vec3(0.2f, 0.2f, 0.2f));
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
 	glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
-	SetMaterial(shaderProgram, mat_list, 0, 1);
+	SetMaterial(shaderProgram, mat_list, 0, 0);
 	glDrawArrays(GL_TRIANGLES, modelStarts[6], modelNumVerts[6]);
 
 

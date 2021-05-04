@@ -55,8 +55,8 @@ vec3 DiffuseAndSpecular(vec3 light_pos, vec3 light_col, vec3 mat_Kd, vec3 mat_Ks
 
 
 void main() {
-  vec3 ambientLight = vec3(0.08);
-  vec3 textAmbLight = vec3(0.37);
+  vec3 ambientLight = vec3(0);
+  vec3 textAmbLight = vec3(0.05);
   vec3 oColor = vec3(0.0,0.0,0.0);
   int matInd = int(round(matIndex));
   Material vert_mat;
@@ -72,7 +72,7 @@ void main() {
       oColor += DiffuseAndSpecular(pointLightsPOS[i], inPointLightsCOLOR[i], vert_mat.Kd, vert_mat.Ks, vert_mat.Ns, vertNormal, pos);
     }
     oColor += vert_mat.Ke;
-    oColor = min(oColor, vec3(1.0));
+    oColor = clamp(oColor, 0.0, 1.0);
     outColor = vec4(oColor, 1);
   }
   else if (texID == 0) {
