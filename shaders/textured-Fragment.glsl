@@ -14,7 +14,6 @@ uniform sampler2D tex0;
 uniform sampler2D tex1;
 uniform sampler2D tex2;
 
-
 uniform int texID;
 
 #define MATERIAL_SIZE 24
@@ -57,7 +56,7 @@ vec3 DiffuseAndSpecular(vec3 light_pos, vec3 light_col, vec3 mat_Kd, vec3 mat_Ks
 
 
 void main() {
-  vec3 ambientLight = vec3(0);
+  vec3 ambientLight = vec3(0.001);
   vec3 textAmbLight = vec3(0.05);
   vec3 oColor = vec3(0.0,0.0,0.0);
   int matInd = int(round(matIndex));
