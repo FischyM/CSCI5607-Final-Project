@@ -165,6 +165,8 @@ struct MapFile {
 	int width = 0;
 	int height = 0;
 	char* data = NULL;
+    float* doorData = NULL;
+    bool* openData = NULL;
 };
 
 map <char, bool> doorOpen = { {'A',false}, {'B',false}, {'C',false}, {'D',false}, {'E',false} };
@@ -937,7 +939,20 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 
 				glm::mat4 model = glm::mat4(1);
+                
+                if(!map_data.openData[j * map_data.width + i])
+                {
 				model = glm::translate(model, glm::vec3(i, 0, j));
+                }
+                else
+                {
+                model = glm::translate(model, glm::vec3(i, map_data.doorData[j * map_data.width + i], j));
+                map_data.doorData[j * map_data.width + i] = map_data.doorData[j * map_data.width + i] - 0.008;
+                if(map_data.doorData[j * map_data.width + i] < -1)
+                {
+                map_data.data[j * map_data.width + i] = 'O';
+                }
+                }
 
 				//Set which texture to use (-1 = no texture ... bound to GL_TEXTURE1)
 				glUniform1i(uniTexID, -1);
@@ -1270,11 +1285,15 @@ void loadMapFile(const char* file_name, MapFile& map_data) {
 
 	// create data array
 	map_data.data = new char[map_data.height * map_data.width];
+    map_data.doorData = new float[map_data.height * map_data.width];
+    map_data.openData = new bool[map_data.height * map_data.width];
 
 	// fill data array
 	for (int j = 0; j < map_data.height; j++) {
 		for (int i = 0; i < map_data.width; i++) {
 			map_file >> map_data.data[j * map_data.width + i];
+            map_data.openData[map_data.height * map_data.width] = false;
+            map_data.doorData[map_data.height * map_data.width] = 0;
 		}
 	}
 }
@@ -1296,7 +1315,7 @@ void CheckClickEvent(float x, float z, MapFile map_data) {
 				if (doorToKey[map_tile] == activeItem) {  //and you have the right key
 					// remove key and remove door, now you can move
 					activeItem = '0';
-					map_data.data[ind] = 'O';
+                    map_data.openData[ind] = true;
 				}
 			}
 
