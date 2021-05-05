@@ -67,7 +67,11 @@ float clickPassTime = 0;
 float clickAnimationTime = 0.4;
 bool LeftMouseClick = false;
 int musicCounter = 0;
-
+float doorAHeight = 0;
+float doorBHeight = 0;
+float doorCHeight = 0;
+float doorDHeight = 0;
+float doorEHeight = 0;
 
 
 
@@ -167,8 +171,6 @@ struct MapFile {
 	int width = 0;
 	int height = 0;
 	char* data = NULL;
-    float* doorData = NULL;
-    bool* openData = NULL;
 };
 
 map <char, bool> doorOpen = { {'A',false}, {'B',false}, {'C',false}, {'D',false}, {'E',false} };
@@ -187,7 +189,7 @@ void setCamDirFromAngle(float cam_angle) {
 }
 
 bool isDoor(char type) {
-	if (type == 'A' || type == 'B' || type == 'C' || type == 'D' || type == 'E')
+	if (type == 'A' || type == 'B' || type == 'C' || type == 'D' || type == 'E' || type == 'Z' || type == 'X' || type == 'V' || type == 'N' || type == 'M' )
 		return true;
 	else
 		return false;
@@ -957,19 +959,9 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 				glm::mat4 model = glm::mat4(1);
                 
-                if(!map_data.openData[j * map_data.width + i])
-                {
+                
 				model = glm::translate(model, glm::vec3(i, 0, j));
-                }
-                else
-                {
-                model = glm::translate(model, glm::vec3(i, map_data.doorData[j * map_data.width + i], j));
-                map_data.doorData[j * map_data.width + i] = map_data.doorData[j * map_data.width + i] - 0.008;
-                if(map_data.doorData[j * map_data.width + i] < -1)
-                {
-                map_data.data[j * map_data.width + i] = 'O';
-                }
-                }
+                
 
 				//Set which texture to use (-1 = no texture ... bound to GL_TEXTURE1)
 				glUniform1i(uniTexID, -1);
@@ -977,6 +969,96 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				//Draw an instance of the model (at the position & orientation specified by the model matrix above)
 				glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]); //(Primitive Type, Start Vertex, Num Verticies
 			}
+            else if (map_type == 'Z') {
+                // set color
+                SetMaterial(shaderProgram, mat_list, 1, 1);
+               
+                glm::mat4 model = glm::mat4(1);
+                
+                model = glm::translate(model, glm::vec3(i, doorAHeight, j));
+                doorAHeight = doorAHeight - 0.008;
+                if(doorAHeight < -1)
+                {
+                map_data.data[j * map_data.width + i] = 'O';
+                }
+                //Set which texture to use (-1 = no texture ... bound to GL_TEXTURE1)
+                glUniform1i(uniTexID, -1);
+                glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+                //Draw an instance of the model (at the position & orientation specified by the model matrix above)
+                glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]); //(Primitive Type, Start Vertex, Num Verticies
+            }
+            else if (map_type == 'X') {
+                // set color
+                SetMaterial(shaderProgram, mat_list, 2, 1);
+               
+                glm::mat4 model = glm::mat4(1);
+                
+                model = glm::translate(model, glm::vec3(i, doorBHeight, j));
+                doorBHeight = doorBHeight - 0.008;
+                if(doorBHeight < -1)
+                {
+                map_data.data[j * map_data.width + i] = 'O';
+                }
+                //Set which texture to use (-1 = no texture ... bound to GL_TEXTURE1)
+                glUniform1i(uniTexID, -1);
+                glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+                //Draw an instance of the model (at the position & orientation specified by the model matrix above)
+                glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]); //(Primitive Type, Start Vertex, Num Verticies
+            }
+            else if (map_type == 'V') {
+                // set color
+                SetMaterial(shaderProgram, mat_list, 3, 1);
+               
+                glm::mat4 model = glm::mat4(1);
+                
+                model = glm::translate(model, glm::vec3(i, doorCHeight, j));
+                doorCHeight = doorCHeight - 0.008;
+                if(doorCHeight < -1)
+                {
+                map_data.data[j * map_data.width + i] = 'O';
+                }
+                //Set which texture to use (-1 = no texture ... bound to GL_TEXTURE1)
+                glUniform1i(uniTexID, -1);
+                glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+                //Draw an instance of the model (at the position & orientation specified by the model matrix above)
+                glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]); //(Primitive Type, Start Vertex, Num Verticies
+            }
+            else if (map_type == 'N') {
+                // set color
+                SetMaterial(shaderProgram, mat_list, 4, 1);
+               
+                glm::mat4 model = glm::mat4(1);
+                
+                model = glm::translate(model, glm::vec3(i, doorDHeight, j));
+                doorDHeight = doorDHeight - 0.008;
+                if(doorDHeight < -1)
+                {
+                map_data.data[j * map_data.width + i] = 'O';
+                }
+                //Set which texture to use (-1 = no texture ... bound to GL_TEXTURE1)
+                glUniform1i(uniTexID, -1);
+                glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+                //Draw an instance of the model (at the position & orientation specified by the model matrix above)
+                glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]); //(Primitive Type, Start Vertex, Num Verticies
+            }
+            else if (map_type == 'M') {
+                // set color
+                SetMaterial(shaderProgram, mat_list, 5, 1);
+               
+                glm::mat4 model = glm::mat4(1);
+                
+                model = glm::translate(model, glm::vec3(i, doorEHeight, j));
+                doorEHeight = doorEHeight - 0.008;
+                if(doorEHeight < -1)
+                {
+                map_data.data[j * map_data.width + i] = 'O';
+                }
+                //Set which texture to use (-1 = no texture ... bound to GL_TEXTURE1)
+                glUniform1i(uniTexID, -1);
+                glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+                //Draw an instance of the model (at the position & orientation specified by the model matrix above)
+                glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]); //(Primitive Type, Start Vertex, Num Verticies
+            }
 			// Keys
 			else if (map_type == 'a' || map_type == 'b' || map_type == 'c' || map_type == 'd' || map_type == 'e') {
 				// set color
@@ -1302,15 +1384,11 @@ void loadMapFile(const char* file_name, MapFile& map_data) {
 
 	// create data array
 	map_data.data = new char[map_data.height * map_data.width];
-    map_data.doorData = new float[map_data.height * map_data.width];
-    map_data.openData = new bool[map_data.height * map_data.width];
 
 	// fill data array
 	for (int j = 0; j < map_data.height; j++) {
 		for (int i = 0; i < map_data.width; i++) {
 			map_file >> map_data.data[j * map_data.width + i];
-            map_data.openData[map_data.height * map_data.width] = false;
-            map_data.doorData[map_data.height * map_data.width] = 0;
 		}
 	}
 }
@@ -1332,7 +1410,26 @@ void CheckClickEvent(float x, float z, MapFile map_data) {
 				if (doorToKey[map_tile] == activeItem) {  //and you have the right key
 					// remove key and remove door, now you can move
 					activeItem = '0';
-                    map_data.openData[ind] = true;
+                    if(map_tile == 'A')
+                    {
+                    map_data.data[ind] = 'Z';
+                    }
+                    if(map_tile == 'B')
+                    {
+                    map_data.data[ind] = 'X';
+                    }
+                    if(map_tile == 'C')
+                    {
+                    map_data.data[ind] = 'V';
+                    }
+                    if(map_tile == 'D')
+                    {
+                    map_data.data[ind] = 'N';
+                    }
+                    if(map_tile == 'E')
+                    {
+                    map_data.data[ind] = 'M';
+                    }
 				}
 			}
 
