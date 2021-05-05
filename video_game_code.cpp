@@ -285,8 +285,9 @@ int main(int argc, char* argv[]) {
         {
             printf( "Failed to load beat music! SDL_mixer Error: %s\n", Mix_GetError() );
         }
-    
+	
     Mix_PlayMusic( gMusic, -1 );
+	Mix_VolumeMusic( MIX_MAX_VOLUME / 10);
     
 
 	//Load OpenGL extentions with GLAD
