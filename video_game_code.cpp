@@ -732,7 +732,9 @@ int main(int argc, char* argv[]) {
 		hulkPassTime = time - hulkStartTime;
 		if (hulkPassTime >= hulkGrowTime + hulkMaintainTime + hulkShrinkTime) {
 			hulkMode = false;
-			map_data.data[hulkPotionPosIndex] = 'p';
+			if (activeItem != 'p') {
+				map_data.data[hulkPotionPosIndex] = 'p';
+			}
 		}
 
 		//check jump status
