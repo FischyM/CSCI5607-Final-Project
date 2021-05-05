@@ -66,6 +66,7 @@ float mouseClickStartTime = 0;
 float clickPassTime = 0;
 float clickAnimationTime = 0.4;
 bool LeftMouseClick = false;
+int musicCounter = 0;
 
 
 
@@ -160,6 +161,7 @@ PointLights point_lights;
 PointLights Moon;
 
 Mix_Music *gMusic = NULL;
+Mix_Music *hulkMusic = NULL;
 
 struct MapFile {
 	int width = 0;
@@ -270,13 +272,20 @@ int main(int argc, char* argv[]) {
                         printf( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
                     }
     
-    gMusic = Mix_LoadMUS("groovy.mp3");
+    gMusic = Mix_LoadMUS("Music/groovy.mp3");
         if( gMusic == NULL )
         {
             printf( "Failed to load beat music! SDL_mixer Error: %s\n", Mix_GetError() );
         }
     
+    hulkMusic = Mix_LoadMUS("Music/hulk.mp3");
+        if( hulkMusic == NULL )
+        {
+            printf( "Failed to load beat music! SDL_mixer Error: %s\n", Mix_GetError() );
+        }
+    
     Mix_PlayMusic( gMusic, -1 );
+    
 
 	//Load OpenGL extentions with GLAD
 	if (gladLoadGLLoader(SDL_GL_GetProcAddress)) {
@@ -580,6 +589,14 @@ int main(int argc, char* argv[]) {
 		while (SDL_PollEvent(&windowEvent) ) {  //inspect all events in the queue
 			const Uint8* state = SDL_GetKeyboardState(NULL);
 
+           if(!hulkMode)
+           {
+            if(musicCounter < 1)
+            {
+            Mix_PlayMusic( gMusic, -1 );
+            musicCounter++;
+            }
+           }
 
 			if (windowEvent.type == SDL_QUIT) quit = true;
 			//List of keycodes: https://wiki.libsdl.org/SDL_Keycode - You can catch many special keys
@@ -1323,6 +1340,8 @@ void CheckClickEvent(float x, float z, MapFile map_data) {
 			if (activeItem=='p') {
 				activeItem = '0';
 				hulkMode = true;
+                Mix_PlayMusic( hulkMusic, -1 );
+                musicCounter = 0;
 				hulkStartTime = SDL_GetTicks() / 1000.f;
 			}
 
