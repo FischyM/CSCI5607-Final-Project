@@ -57,8 +57,8 @@ vec3 DiffuseAndSpecular(vec3 light_pos, vec3 light_col, vec3 mat_Kd, vec3 mat_Ks
 
 void main() {
   vec3 ambientLight = vec3(0.001);
-  vec3 textAmbLight = vec3(0.05);
   vec3 oColor = vec3(0.0,0.0,0.0);
+  vec3 iColor = vec3(0.0, 0.0, 0.0);
   int matInd = int(round(matIndex));
   Material vert_mat;
   if (useMat) {
@@ -73,22 +73,25 @@ void main() {
       oColor += DiffuseAndSpecular(pointLightsPOS[i], inPointLightsCOLOR[i], vert_mat.Kd, vert_mat.Ks, vert_mat.Ns, vertNormal, pos);
     }
     oColor += vert_mat.Ke;
-    oColor = clamp(oColor, 0.0, 1.0);
-    outColor = vec4(oColor, 1);
   }
-  else if (texID == 0) {
-    oColor = texture(tex0, texcoord).rgb * textAmbLight;
-    outColor = vec4(oColor,1);
+  else if (texID == 0) {  // you win cube
+      oColor = texture(tex0, texcoord).rgb * vec3(0.6);
   }
-  else if (texID == 1) {
-    oColor = texture(tex1, texcoord).rgb * textAmbLight;
-    outColor = vec4(oColor,1);
+  else if (texID == 1) {  // brick wall
+      iColor = texture(tex1, texcoord).rgb;
+      oColor += vert_mat.Ka * ambientLight;
+      for (int i = 0; i < POINT_LIGHTS_SIZE; i++) {
+          oColor += DiffuseAndSpecular(pointLightsPOS[i], iColor, vert_mat.Kd, vert_mat.Ks, vert_mat.Ns, vertNormal, pos);
+      }
+      oColor += vert_mat.Ke;
   }
-  else if (texID == 2) {
-    oColor = texture(tex2, texcoord).rgb * textAmbLight;
-    outColor = vec4(oColor,1);
+  else if (texID == 2) {  // moon
+      oColor = texture(tex2, texcoord).rgb * vec3(0.5);
   }
   else {
-    outColor = vec4(1,0,0,1);
+      oColor = vec3(1,0,0);
   }
+
+  oColor = clamp(oColor, 0.0, 1.0);
+  outColor = vec4(oColor, 1);
 }

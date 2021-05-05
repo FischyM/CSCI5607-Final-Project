@@ -583,7 +583,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
 			point_lights.pos[count] = glm::vec3(2 + i * 7, 1, 2 + j * 7);  // remember, y is up
-			point_lights.color[count] = glm::vec3(3);
+			point_lights.color[count] = glm::vec3(2);
 			point_lights.start[count] = point_lights.pos[count];
 			point_lights.rando[count] = rand01();
 			count++;
@@ -610,11 +610,11 @@ int main(int argc, char* argv[]) {
 
 
 
-	//for (int i = 0; i < mat_list.size(); i++) {
-	//	cout << i << " ";
-	//	mat_list[i].debug();
-	//}
-	//printf("number of materials right now: %d\n", mat_list.size());
+	for (int i = 0; i < mat_list.size(); i++) {
+		cout << i << " ";
+		mat_list[i].debug();
+	}
+	printf("number of materials right now: %d\n", mat_list.size());
 
 
 	while (!quit) {
@@ -948,7 +948,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 				model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
 
-				SetMaterial(shaderProgram, mat_list, 0, 0);
+				SetMaterial(shaderProgram, mat_list, 17, 1);
 				//Set which texture to use (1 = brick texture ... bound to GL_TEXTURE1)
 				glUniform1i(uniTexID, 1);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -962,7 +962,6 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 				model = glm::translate(model, glm::vec3(i, 0, j));
 				model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
 				SetMaterial(shaderProgram, mat_list, 11, 1);
-				//SetMaterial(shaderProgram, mat_list, 16);
 
 				glUniform1i(uniTexID, -1);
 				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -1141,7 +1140,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 			else if (map_type == 'h') {
 
 				glm::mat4 model = glm::mat4(1);
-				model = glm::translate(model, glm::vec3(i, -0.2 + sin(timePast) * 0.18, j));
+				model = glm::translate(model, glm::vec3(i, 0.2 + sin(timePast) * 0.18, j));
 				model = glm::scale(model, glm::vec3(.2f, .2f, .2f));
 				model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 0.0f));
 
