@@ -110,7 +110,7 @@ bool inAir = false;
 
 //stars
 vector<pair<int, int>> starsVec;
-int StarAmount = 40;
+int StarAmount = 60;
 
 
 // door:key colors
@@ -478,36 +478,10 @@ int main(int argc, char* argv[]) {
 	SDL_FreeSurface(surface1);
 	//// End Allocate Texture ///////
 
+
+
 	//// Allocate Texture 2 (Moon) ///////
 	SDL_Surface* surface2 = SDL_LoadBMP("textures/Moon2.bmp");
-	if (surface2 == NULL)
-	{ //If it failed, print the error
-		printf("Error: \"%s\"\n", SDL_GetError());
-		return 1;
-	}
-	GLuint tex2;
-	glGenTextures(1, &tex2);
-
-	//Load the texture into memory
-	glActiveTexture(GL_TEXTURE2);
-
-	glBindTexture(GL_TEXTURE_2D, tex2);
-	//What to do outside 0-1 range
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	//How to filter
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface2->w, surface2->h, 0, GL_BGR, GL_UNSIGNED_BYTE, surface2->pixels);
-	glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
-
-	SDL_FreeSurface(surface2);
-	//// End Allocate Texture ///////
-
-
-	//// Allocate Texture 2 (Moon) ///////
-	SDL_Surface* surface2 = SDL_LoadBMP("textures/2k_moon.bmp");
 	if (surface == NULL) { //If it failed, print the error
 		printf("Error: \"%s\"\n", SDL_GetError()); return 1;
 	}
