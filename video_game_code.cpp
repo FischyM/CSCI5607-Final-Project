@@ -1192,7 +1192,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		int locaX = starsVec[i].first;
 		int locaZ = starsVec[i].second;
 		model = glm::mat4(1);
-		model = glm::translate(model, glm::vec3(locaX, 20+i*2, locaZ));
+		model = glm::translate(model, glm::vec3(locaX, 20+i, locaZ));
 		model = glm::scale(model, sin(timePast/50*i)*5.0f * glm::vec3(0.2f, 0.2f, 0.2f));
 		model = glm::rotate(model, 3.14f  /4, glm::vec3(1.0f, 0.0f, 0.0f));
 		//model = glm::rotate(model, timePast * 3.14f * i / 80, glm::vec3(0.0f, 1.0f, 0.0f));
