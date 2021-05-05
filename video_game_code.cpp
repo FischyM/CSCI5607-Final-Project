@@ -97,6 +97,7 @@ float hulkPassTime = 0.0f;
 float hulkGrowTime = 1.0f; //animation for grow up
 float hulkShrinkTime = 1.0f; //animation for Shrink
 float hulkMaintainTime = 20.0f; //after 20seconds hulk mode off.
+bool potionExsit = true;
 int hulkPotionPosIndex = 0; //replace potion if hulk mode off
 
 
@@ -732,12 +733,13 @@ int main(int argc, char* argv[]) {
 		}
 
 
-		//Check hulk status
+		//Check hulk status and replace potion
 		hulkPassTime = time - hulkStartTime;
 		if (hulkPassTime >= hulkGrowTime + hulkMaintainTime + hulkShrinkTime) {
 			hulkMode = false;
-			if (activeItem != 'p') {
+			if (!potionExsit) {
 				map_data.data[hulkPotionPosIndex] = 'p';
+				potionExsit = true;
 			}
 		}
 
@@ -1488,6 +1490,7 @@ void CheckClickEvent(float x, float z, MapFile map_data) {
 			if (activeItem=='p') {
 				activeItem = '0';
 				hulkMode = true;
+				potionExsit = false;
                 Mix_PlayMusic( hulkMusic, -1 );
                 musicCounter = 0;
 				hulkStartTime = SDL_GetTicks() / 1000.f;
