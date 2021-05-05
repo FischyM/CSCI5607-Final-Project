@@ -476,6 +476,32 @@ int main(int argc, char* argv[]) {
 	SDL_FreeSurface(surface1);
 	//// End Allocate Texture ///////
 
+	//// Allocate Texture 2 (Moon) ///////
+	SDL_Surface* surface2 = SDL_LoadBMP("textures/Moon2.bmp");
+	if (surface2 == NULL)
+	{ //If it failed, print the error
+		printf("Error: \"%s\"\n", SDL_GetError());
+		return 1;
+	}
+	GLuint tex2;
+	glGenTextures(1, &tex2);
+
+	//Load the texture into memory
+	glActiveTexture(GL_TEXTURE2);
+
+	glBindTexture(GL_TEXTURE_2D, tex2);
+	//What to do outside 0-1 range
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//How to filter
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface2->w, surface2->h, 0, GL_BGR, GL_UNSIGNED_BYTE, surface2->pixels);
+	glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
+
+	SDL_FreeSurface(surface2);
+	//// End Allocate Texture ///////
 
 	//******************************************************************* Shaders *****************************************************//*
 
@@ -790,6 +816,10 @@ int main(int argc, char* argv[]) {
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, tex1);
 		glUniform1i(glGetUniformLocation(texturedShader, "tex1"), 1);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, tex2);
+		glUniform1i(glGetUniformLocation(texturedShader, "tex2"), 2);
 
 		glBindVertexArray(vao);
 		drawGeometry(texturedShader, modelNumVerts, modelStarts, map_data);
@@ -1150,8 +1180,8 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	model = glm::translate(model, Moon.pos[0]);
 	model = glm::scale(model, 50.0f * glm::vec3(0.2f, 0.2f, 0.2f));
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
-	glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
-	SetMaterial(shaderProgram, mat_list, 0, 0);
+	glUniform1i(uniTexID, 2);  //Set which texture to use (-1 = no texture)
+	//SetMaterial(shaderProgram, mat_list, 0, 0);
 	glDrawArrays(GL_TRIANGLES, modelStarts[6], modelNumVerts[6]);
 
 
@@ -1160,7 +1190,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		int locaX = starsVec[i].first;
 		int locaZ = starsVec[i].second;
 		model = glm::mat4(1);
-		model = glm::translate(model, glm::vec3(locaX, 30, locaZ));
+		model = glm::translate(model, glm::vec3(locaX, 20+i*2, locaZ));
 		model = glm::scale(model, sin(timePast/50*i)*5.0f * glm::vec3(0.2f, 0.2f, 0.2f));
 		model = glm::rotate(model, 3.14f  /4, glm::vec3(1.0f, 0.0f, 0.0f));
 		//model = glm::rotate(model, timePast * 3.14f * i / 80, glm::vec3(0.0f, 1.0f, 0.0f));

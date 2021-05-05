@@ -12,6 +12,8 @@ in float matIndex;
 
 uniform sampler2D tex0;
 uniform sampler2D tex1;
+uniform sampler2D tex2;
+
 
 uniform int texID;
 
@@ -81,6 +83,10 @@ void main() {
   }
   else if (texID == 1) {
     oColor = texture(tex1, texcoord).rgb * textAmbLight;
+    outColor = vec4(oColor,1);
+  }
+  else if (texID == 2) {
+    oColor = texture(tex2, texcoord).rgb * textAmbLight;
     outColor = vec4(oColor,1);
   }
   else {
