@@ -54,7 +54,7 @@ using namespace std;
 
 
 GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName);
-bool DEBUG_ON = false;
+bool DEBUG_ON = true;
 bool fullscreen = false;
 int screenWidth = 800;
 int screenHeight = 600;
@@ -151,6 +151,8 @@ vector<Material> mat_list;
 struct PointLights {
 	glm::vec3 pos[16];
 	glm::vec3 color[16];
+	glm::vec3 start[16];
+	float rando[16];
 	int size;
 	void debug() {
 		printf("total point lights: %d\n", size);
@@ -581,6 +583,8 @@ int main(int argc, char* argv[]) {
 		for (int j = 0; j < 4; j++) {
 			point_lights.pos[count] = glm::vec3(2 + i * 7, 1, 2 + j * 7);  // remember, y is up
 			point_lights.color[count] = glm::vec3(3);
+			point_lights.start[count] = point_lights.pos[count];
+			point_lights.rando[count] = rand01();
 			count++;
 		}
 	}
@@ -779,6 +783,18 @@ int main(int argc, char* argv[]) {
 		}
 
 
+		// update light positions as they float
+		count = 0;
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				glm::vec3 start = point_lights.start[count];
+				float rando = point_lights.rando[count];
+				point_lights.pos[count] = glm::vec3(start.x, sin(timePast * rando) * 0.2+ start.y, start.z);  // remember, y is up
+				count++;
+			}
+		}
+
+
 		//******************************************************************* Clear and prepare for next frame *************************************************//
 
 		// Clear the screen to default color
@@ -794,9 +810,6 @@ int main(int argc, char* argv[]) {
 		setCameraHight(time, map_data);
 
 
-
-
-
 		//change lookAt view if found the goal
 		if (goal_found) {
 			cam_pos = glm::vec3(0, 30.0f, 0);  // Cam Position
@@ -805,6 +818,7 @@ int main(int argc, char* argv[]) {
 		
 		//printf("cam_pos :%f, %f, %f\n", cam_pos.x, cam_pos.y, cam_pos.z);
 		//printf("cam_dir :%f, %f, %f\n", cam_dir.x, cam_dir.y, cam_dir.z);
+
 
 		glm::mat4 view = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);
 
@@ -1207,17 +1221,17 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 
 
 	// draw lights
-	//for (int i = 0; i < point_lights.size; i++) {
-	//	// for each light, draw them as a square
-	//	glm::mat4 model = glm::mat4(1);
-	//	model = glm::translate(model, point_lights.pos[i]);
-	//	model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
+	for (int i = 0; i < point_lights.size; i++) {
+		// for each light, draw them as a square
+		glm::mat4 model = glm::mat4(1);
+		model = glm::translate(model, point_lights.pos[i]);
+		model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
 
-	//	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
-	//	glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
-	//	SetMaterial(shaderProgram, mat_list, 0, 1);
-	//	glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]);
-	//}
+		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
+		glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
+		SetMaterial(shaderProgram, mat_list, 0, 1);
+		glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]);
+	}
 
 	//******************************************************************* Draw item in hand *****************************************************************//* 
 
@@ -1250,6 +1264,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		int ModelInd = 3;//defalut model is key
 		if (activeItem=='p') { //potion
 			model = glm::scale(model, glm::vec3(.5f, .5f, .5f));
+			model = glm::rotate(model, 3.14f / 2, glm::vec3(1.0f, 0.0f, 0.0f));
 			ModelInd = 4;
 		}
 		if (activeItem == 'h') {//hammer
