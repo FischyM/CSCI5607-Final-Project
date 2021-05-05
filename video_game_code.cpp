@@ -62,50 +62,50 @@ int screenHeight = 600;
 static int xpos = screenWidth / 2; // = 400 to center the cursor in the window
 static int ypos = screenHeight / 2; // = 300 to center the cursor in the window
 //mouse click variables
-float mouseClickStartTime = 0;
-float clickPassTime = 0;
-float clickAnimationTime = 0.4;
+float mouseClickStartTime = 0.0f;
+float clickPassTime = 0.0f;
+float clickAnimationTime = 0.4f;
 bool LeftMouseClick = false;
 int musicCounter = 0;
-float doorAHeight = 0;
-float doorBHeight = 0;
-float doorCHeight = 0;
-float doorDHeight = 0;
-float doorEHeight = 0;
+float doorAHeight = 0.0f;
+float doorBHeight = 0.0f;
+float doorCHeight = 0.0f;
+float doorDHeight = 0.0f;
+float doorEHeight = 0.0f;
 
 
 
 //Game parameters
-float timePast = 0;
-float dt = 0;
+float timePast = 0.0f;
+float dt = 0.0f;
 bool goal_found = false;
 char activeItem = '0';
 
 //Character parameters
 int accel = 1;
-float char_radius = 0.125;
-float char_Event_radius = 0.6;
-float slowFactor = 0.75;
-float human_Base_Hight = 0; //human hight
+float char_radius = 0.125f;
+float char_Event_radius = 0.6f;
+float slowFactor = 0.75f;
+float human_Base_Hight = 0.0f; //human hight
 
 
 //Hulk parameters
 bool hulkMode = false;
-float hulkBaseH = 0.7; //hulk hight
-float hulkStartTime = 0;
-float hulkPassTime = 0;
-float hulkGrowTime = 1; //animation for grow up
-float hulkShrinkTime = 1; //animation for Shrink
-float hulkMaintainTime = 20; //after 20seconds hulk mode off.
+float hulkBaseH = 0.7f; //hulk hight
+float hulkStartTime = 0.0f;
+float hulkPassTime = 0.0f;
+float hulkGrowTime = 1.0f; //animation for grow up
+float hulkShrinkTime = 1.0f; //animation for Shrink
+float hulkMaintainTime = 20.0f; //after 20seconds hulk mode off.
 int hulkPotionPosIndex = 0; //replace potion if hulk mode off
 
 
 //jump feature parameters
-float jumpStartTime = 0;
-float jumpPassTime = 0;
-float MaxInAirTime = 0.8; //Leave ground to back to ground, total 0.8 second.
+float jumpStartTime = 0.0f;
+float jumpPassTime = 0.0f;
+float MaxInAirTime = 0.8f; //Leave ground to back to ground, total 0.8 second.
 float HalfMaxInAirTime = MaxInAirTime / 2;
-float jumpMaxHight = 1;
+float jumpMaxHight = 1.0f;
 bool inAir = false;
 
 //stars
@@ -440,8 +440,8 @@ int main(int argc, char* argv[]) {
 	//What to do outside 0-1 range
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	//Load the texture into memory
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_BGR, GL_UNSIGNED_BYTE, surface->pixels);
@@ -449,6 +449,8 @@ int main(int argc, char* argv[]) {
 
 	SDL_FreeSurface(surface);
 	//// End Allocate Texture ///////
+
+
 
 
 	//// Allocate Texture 1 (Brick) ///////
@@ -464,8 +466,8 @@ int main(int argc, char* argv[]) {
 
 	glBindTexture(GL_TEXTURE_2D, tex1);
 	//What to do outside 0-1 range
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	//How to filter
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -476,6 +478,32 @@ int main(int argc, char* argv[]) {
 	SDL_FreeSurface(surface1);
 	//// End Allocate Texture ///////
 
+
+
+	//// Allocate Texture 2 (Moon) ///////
+	SDL_Surface* surface2 = SDL_LoadBMP("textures/2k_moon.bmp");
+	if (surface == NULL) { //If it failed, print the error
+		printf("Error: \"%s\"\n", SDL_GetError()); return 1;
+	}
+	GLuint tex2;
+	glGenTextures(1, &tex2);
+
+	//Load the texture into memory
+	glActiveTexture(GL_TEXTURE2);
+
+	glBindTexture(GL_TEXTURE_2D, tex2);
+	//What to do outside 0-1 range
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//How to filter
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface2->w, surface2->h, 0, GL_BGR, GL_UNSIGNED_BYTE, surface2->pixels);
+	glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
+
+	SDL_FreeSurface(surface2);
+	//// End Allocate Texture ///////
 
 	//******************************************************************* Shaders *****************************************************//*
 
@@ -683,8 +711,8 @@ int main(int argc, char* argv[]) {
 			v_x = v_x - cam_speed * cam_dir.z * accel * slowFactor;
 			v_z = v_z + cam_speed * cam_dir.x * accel * slowFactor;
 		}
-		cam_angle = double(xpos) / 1000;
-		cam_dir.y = double(-ypos) / 1000;
+		cam_angle = float(xpos) / 1000.0f;
+		cam_dir.y = float(-ypos) / 1000.0f;
 		setCamDirFromAngle(cam_angle);
 
 		//******************************************************************* Set character status *************************************************//
@@ -976,7 +1004,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
                 glm::mat4 model = glm::mat4(1);
                 
                 model = glm::translate(model, glm::vec3(i, doorAHeight, j));
-                doorAHeight = doorAHeight - 0.008;
+                doorAHeight = doorAHeight - 0.008f;
                 if(doorAHeight < -1)
                 {
                 map_data.data[j * map_data.width + i] = 'O';
@@ -994,7 +1022,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
                 glm::mat4 model = glm::mat4(1);
                 
                 model = glm::translate(model, glm::vec3(i, doorBHeight, j));
-                doorBHeight = doorBHeight - 0.008;
+                doorBHeight = doorBHeight - 0.008f;
                 if(doorBHeight < -1)
                 {
                 map_data.data[j * map_data.width + i] = 'O';
@@ -1012,7 +1040,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
                 glm::mat4 model = glm::mat4(1);
                 
                 model = glm::translate(model, glm::vec3(i, doorCHeight, j));
-                doorCHeight = doorCHeight - 0.008;
+                doorCHeight = doorCHeight - 0.008f;
                 if(doorCHeight < -1)
                 {
                 map_data.data[j * map_data.width + i] = 'O';
@@ -1030,7 +1058,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
                 glm::mat4 model = glm::mat4(1);
                 
                 model = glm::translate(model, glm::vec3(i, doorDHeight, j));
-                doorDHeight = doorDHeight - 0.008;
+                doorDHeight = doorDHeight - 0.008f;
                 if(doorDHeight < -1)
                 {
                 map_data.data[j * map_data.width + i] = 'O';
@@ -1048,7 +1076,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
                 glm::mat4 model = glm::mat4(1);
                 
                 model = glm::translate(model, glm::vec3(i, doorEHeight, j));
-                doorEHeight = doorEHeight - 0.008;
+                doorEHeight = doorEHeight - 0.008f;
                 if(doorEHeight < -1)
                 {
                 map_data.data[j * map_data.width + i] = 'O';
@@ -1150,7 +1178,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 	model = glm::translate(model, Moon.pos[0]);
 	model = glm::scale(model, 50.0f * glm::vec3(0.2f, 0.2f, 0.2f));
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
-	glUniform1i(uniTexID, -1);  //Set which texture to use (-1 = no texture)
+	glUniform1i(uniTexID, 2);  //Set which texture to use (2 = moon)
 	SetMaterial(shaderProgram, mat_list, 0, 0);
 	glDrawArrays(GL_TRIANGLES, modelStarts[6], modelNumVerts[6]);
 
@@ -1238,6 +1266,7 @@ void drawGeometry(int shaderProgram, vector<int> modelNumVerts, vector<int> mode
 		model = glm::rotate(model, timePast * 3.14f / 2, glm::vec3(0.0f, 1.0f, 1.0f));
 		model = glm::rotate(model, timePast * 3.14f / 4, glm::vec3(1.0f, 0.0f, 0.0f));
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model)); //pass model matrix to shader
+		SetMaterial(shaderProgram, mat_list, 0, 0);
 		glUniform1i(uniTexID, 0);
 		glDrawArrays(GL_TRIANGLES, modelStarts[0], modelNumVerts[0]); //(Primitive Type, Start Vertex, Num Verticies)
 	}
@@ -1398,8 +1427,8 @@ void CheckClickEvent(float x, float z, MapFile map_data) {
 	vector<int> bounds = { -1, 1 };
 	for (auto dx : bounds) {
 		for (auto dz : bounds) {
-			int w = ceil(x + char_Event_radius * dx);
-			int h = ceil(z + char_Event_radius * dz);
+			int w = (int)ceil(x + char_Event_radius * dx);
+			int h = (int)ceil(z + char_Event_radius * dz);
 			if (w < 1 || h < 1 || w > map_data.width || h > map_data.height) { continue; }
 
 			int ind = (h - 1) * map_data.width + (w - 1);
@@ -1459,8 +1488,8 @@ bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data) {
 	vector<int> bounds = { -1, 1, 2 };
 	for (auto dx : bounds) {
 		for (auto dz : bounds) {
-			int w = ceil(x + char_radius * dx);
-			int h = ceil(z + char_radius * dz);
+			int w = (int)ceil(x + char_radius * dx);
+			int h = (int)ceil(z + char_radius * dz);
 			if (w < 1 || h < 1 || w > map_data.width || h > map_data.height) {
 				if (verbose) printf("OOB w %d, h %d, width %d, heigh %.d\n", w, h, map_data.width, map_data.height);
 				return false;
@@ -1511,16 +1540,17 @@ bool isWalkableAndPickUp(float newX, float newZ, MapFile map_data) {
 
 void loadModelMTL(const char* file_name, vector<Material>& mat_list) {
 	FILE* fp = fopen(file_name, "r");
-	if (fp == NULL) {
-		perror("Can't open file");
+	if (fp == 0) {
+		perror("Can't open file"); return;
 	}
+	int ret;
 	Material mat;
 	char line[1024];
 	while (fgets(line, 1024, fp)) {
 		if (line[0] == '#') {  // skip commented lines
 			continue;
 		}
-		char command[100];
+		char command[100] = { 0 };
 		int word_count = sscanf(line, "%s ", command);  // read first word in the line
 		if (word_count < 1) {  // empty line
 			continue;
@@ -1529,13 +1559,13 @@ void loadModelMTL(const char* file_name, vector<Material>& mat_list) {
 		std::string commandStr = command;
 		if (commandStr == "newmtl") {  // beginning of new material
 			mat = Material();  // so reset mat to a new Material. It will populate below a
-			char newmtl[20];
-			sscanf(line, "newmtl %s", newmtl);
-			strcpy(mat.newmtl, newmtl);
+			char newmtl[21] = { 0 };
+			ret = sscanf(line, "newmtl %s", newmtl);
+			snprintf(mat.newmtl, 20, newmtl);
 		}
 		else if (commandStr == "Ns") {
 			float ns = -1.0;
-			sscanf(line, "Ns %f", &ns);
+			ret = sscanf(line, "Ns %f", &ns);
 			mat.Ns = ns;
 		}
 		else if (commandStr == "Ka") {
@@ -1543,22 +1573,22 @@ void loadModelMTL(const char* file_name, vector<Material>& mat_list) {
 			//sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
 			//vertex_arr.push_back(vertex);
 			glm::vec3 Ka = glm::vec3(-1.0, -1.0, -1.0);
-			sscanf(line, "Ka %f %f %f", &Ka.x, &Ka.y, &Ka.z);
+			ret = sscanf(line, "Ka %f %f %f", &Ka.x, &Ka.y, &Ka.z);
 			mat.Ka = Ka;
 		}
 		else if (commandStr == "Kd") {
 			glm::vec3 Kd = glm::vec3(-1.0, -1.0, -1.0);
-			sscanf(line, "Kd %f %f %f", &Kd.x, &Kd.y, &Kd.z);
+			ret = sscanf(line, "Kd %f %f %f", &Kd.x, &Kd.y, &Kd.z);
 			mat.Kd = Kd;
 		}
 		else if (commandStr == "Ks") {
 			glm::vec3 Ks = glm::vec3(-1.0, -1.0, -1.0);
-			sscanf(line, "Ks %f %f %f", &Ks.x, &Ks.y, &Ks.z);
+			ret = sscanf(line, "Ks %f %f %f", &Ks.x, &Ks.y, &Ks.z);
 			mat.Ks = Ks;
 		}
 		else if (commandStr == "Ke") {
 			glm::vec3 Ke = glm::vec3(-1.0, -1.0, -1.0);
-			sscanf(line, "Ke %f %f %f", &Ke.x, &Ke.y, &Ke.z);
+			ret = sscanf(line, "Ke %f %f %f", &Ke.x, &Ke.y, &Ke.z);
 			mat.Ke = Ke;
 		}
 		else if (commandStr == "illum") {  // this is the last item in a material, so add material to list
@@ -1574,8 +1604,8 @@ void dropKey(float vx, float vz, MapFile map_data) {
 	float x = vx + 0.5f;
 	float z = vz + 0.5f;
 	// find indexing for map data
-	int w = ceil(x);
-	int h = ceil(z);
+	int w = (int)ceil(x);
+	int h = (int)ceil(z);
 	int ind = (h - 1) * map_data.width + (w - 1);
 	char map_tile = map_data.data[ind];
 	// only drop key if on an open square and we have a key
@@ -1742,38 +1772,39 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 	bool has_vt = false;
 	char line[1024];
 	int curr_mat_ind = 0;
+	int ret = 0;
 	while (fgets(line, 1024, fp)) {
 		if (line[0] == '#') {  // skip commented lines
 			continue;
 		}
-		char command[100];
+		char command[100] = {0};
 		int word_count = sscanf(line, "%s ", command);  // read first word in the line
 		if (word_count < 1) {  // empty line
 			continue;
 		}
 		string commandStr = command;
 		if (commandStr == "v") {  // vertex
-			glm::vec3 vertex;
-			sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
+			glm::vec3 vertex = {};
+			ret = sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
 			vertex_arr.push_back(vertex);
 		}
 		else if (commandStr == "vt") {  // vertex texture coordinate
 			if (!has_vt) {
 				has_vt = true;
 			}
-			glm::vec2 texture;
-			sscanf(line, "vt %f %f", &texture.x, &texture.y);
+			glm::vec2 texture = {};
+			ret = sscanf(line, "vt %f %f", &texture.x, &texture.y);
 			texture_arr.push_back(texture);
 		}
 		else if (commandStr == "vn") {  // vertex normal
-			glm::vec3 normal;
-			sscanf(line, "vn %f %f %f", &normal.x, &normal.y, &normal.z);
+			glm::vec3 normal = {};
+			ret = sscanf(line, "vn %f %f %f", &normal.x, &normal.y, &normal.z);
 			normal_arr.push_back(normal);
 		}
 		else if (commandStr == "f") {  // triangle face
 			if (has_vt) {
 				int v1, vt1, vn1, v2, vt2, vn2, v3, vt3, vn3;
-				sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d", &v1, &vt1, &vn1, &v2, &vt2, &vn2, &v3, &vt3, &vn3);
+				ret = sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d", &v1, &vt1, &vn1, &v2, &vt2, &vn2, &v3, &vt3, &vn3);
 				vertex_ind.push_back(v1); texture_ind.push_back(vt1); normal_ind.push_back(vn1); material_ind.push_back(curr_mat_ind);
 				vertex_ind.push_back(v2); texture_ind.push_back(vt2); normal_ind.push_back(vn2); material_ind.push_back(curr_mat_ind);
 				vertex_ind.push_back(v3); texture_ind.push_back(vt3); normal_ind.push_back(vn3); material_ind.push_back(curr_mat_ind);
@@ -1781,7 +1812,7 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 			}
 			else {
 				int v1, vn1, v2, vn2, v3, vn3;
-				sscanf(line, "f %d//%d %d//%d %d//%d", &v1, &vn1, &v2, &vn2, &v3, &vn3);
+				ret = sscanf(line, "f %d//%d %d//%d %d//%d", &v1, &vn1, &v2, &vn2, &v3, &vn3);
 				vertex_ind.push_back(v1); normal_ind.push_back(vn1); material_ind.push_back(curr_mat_ind);
 				vertex_ind.push_back(v2); normal_ind.push_back(vn2); material_ind.push_back(curr_mat_ind);
 				vertex_ind.push_back(v3); normal_ind.push_back(vn3); material_ind.push_back(curr_mat_ind);
@@ -1789,8 +1820,8 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 			num_tri++;
 		}
 		else if (commandStr == "usemtl") {
-			char mtl[20];
-			sscanf(line, "usemtl %s", mtl);
+			char mtl[21] = {0};
+			ret = sscanf(line, "usemtl %s", mtl);
 			for (int i = 0; i < mat_list.size(); i++) {
 				if (strcmp(mat_list[i].newmtl, mtl) == 0) {
 					curr_mat_ind = i;
@@ -1802,11 +1833,13 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 	fclose(fp);
 
 	const int n = 9;
-	numLines = vertex_ind.size() * n;  // 3 floats for x,y,z of vertex, 2 for u,v texture coordinates, 3 for vertex normal x,y,z, 1 mat index
+	numLines = int(vertex_ind.size()) * n;  // 3 floats for x,y,z of vertex, 2 for u,v texture coordinates, 3 for vertex normal x,y,z, 1 mat index
 	float* model1 = new float[numLines];
 	if (verbose) {
-		printf("\nnum_tri %d, lines %d, size of vertexInd %d, textureInd %d, normalInd %d, materialInd %d\n", num_tri, numLines, vertex_ind.size(), texture_ind.size(), normal_ind.size(), material_ind.size());
-		printf("size of vertexArr %d, size of textureArr %d, size of normalArr %d\n", vertex_arr.size(), texture_arr.size(), normal_arr.size());
+		printf("\nnum_tri %d, lines %d, size of vertexInd %d, textureInd %d, normalInd %d, materialInd %d\n",
+			num_tri, numLines, (int)vertex_ind.size(), (int)texture_ind.size(), (int)normal_ind.size(), (int)material_ind.size());
+		printf("size of vertexArr %d, size of textureArr %d, size of normalArr %d\n",
+			(int)vertex_arr.size(), (int)texture_arr.size(), (int)normal_arr.size());
 
 		cout << "material indices: ";
 		for (int i = 0; i < material_ind.size(); i++) {
@@ -1822,22 +1855,22 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 
 	for (int i = 0; i < vertex_ind.size(); i++) {
 		// vertex x,y,z
-		model1[(i * n)] = vertex_arr[vertex_ind[i] - 1].x;
-		model1[(i * n) + 1] = vertex_arr[vertex_ind[i] - 1].y;
-		model1[(i * n) + 2] = vertex_arr[vertex_ind[i] - 1].z;
+		model1[(i * n)] = vertex_arr[static_cast<std::vector<glm::vec3, std::allocator<glm::vec3>>::size_type>(vertex_ind[i]) - 1].x;
+		model1[(i * n) + 1] = vertex_arr[static_cast<std::vector<glm::vec3, std::allocator<glm::vec3>>::size_type>(vertex_ind[i]) - 1].y;
+		model1[(i * n) + 2] = vertex_arr[static_cast<std::vector<glm::vec3, std::allocator<glm::vec3>>::size_type>(vertex_ind[i]) - 1].z;
 		// texture map u,v
 		if (has_vt) {
-			model1[(i * n) + 3] = texture_arr[texture_ind[i] - 1].x;
-			model1[(i * n) + 4] = texture_arr[texture_ind[i] - 1].y;
+			model1[(i * n) + 3] = texture_arr[static_cast<std::vector<glm::vec2, std::allocator<glm::vec2>>::size_type>(texture_ind[i]) - 1].x;
+			model1[(i * n) + 4] = texture_arr[static_cast<std::vector<glm::vec2, std::allocator<glm::vec2>>::size_type>(texture_ind[i]) - 1].y;
 		}
 		else {
 			model1[(i * n) + 3] = 0;
 			model1[(i * n) + 4] = 0;
 		}
 		// vertex normal x,y,z
-		model1[(i * n) + 5] = normal_arr[normal_ind[i] - 1].x;
-		model1[(i * n) + 6] = normal_arr[normal_ind[i] - 1].y;
-		model1[(i * n) + 7] = normal_arr[normal_ind[i] - 1].z;
+		model1[(i * n) + 5] = normal_arr[static_cast<std::vector<glm::vec3, std::allocator<glm::vec3>>::size_type>(normal_ind[i]) - 1].x;
+		model1[(i * n) + 6] = normal_arr[static_cast<std::vector<glm::vec3, std::allocator<glm::vec3>>::size_type>(normal_ind[i]) - 1].y;
+		model1[(i * n) + 7] = normal_arr[static_cast<std::vector<glm::vec3, std::allocator<glm::vec3>>::size_type>(normal_ind[i]) - 1].z;
 		// material index
 		model1[(i * n) + 8] = float(material_ind[i]);  // issue here is that this is an int being allocated to floats pointer
 	}
@@ -1849,11 +1882,11 @@ float* loadModelOBJwithMTL(const char* file_nameOBJ, int& numLines, const char* 
 
 void SendMaterialsToShader(int shaderProgram, vector<Material> mat_list) {
 	const int size = 24;
-	glm::vec3 inMatsKa[size];
-	glm::vec3 inMatsKs[size];
-	glm::vec3 inMatsKd[size];
-	glm::vec3 inMatsKe[size];
-	float inMatsNs[size];
+	glm::vec3 inMatsKa[size] = {};
+	glm::vec3 inMatsKs[size] = {};
+	glm::vec3 inMatsKd[size] = {};
+	glm::vec3 inMatsKe[size] = {};
+	float inMatsNs[size] = {};
 
 	for (int i = 0; i < size; i++) {
 		Material mat = mat_list[i];

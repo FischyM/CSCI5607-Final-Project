@@ -12,6 +12,7 @@ in float matIndex;
 
 uniform sampler2D tex0;
 uniform sampler2D tex1;
+uniform sampler2D tex2;
 
 uniform int texID;
 
@@ -55,7 +56,7 @@ vec3 DiffuseAndSpecular(vec3 light_pos, vec3 light_col, vec3 mat_Kd, vec3 mat_Ks
 
 
 void main() {
-  vec3 ambientLight = vec3(0);
+  vec3 ambientLight = vec3(0.001);
   vec3 textAmbLight = vec3(0.05);
   vec3 oColor = vec3(0.0,0.0,0.0);
   int matInd = int(round(matIndex));
@@ -82,6 +83,10 @@ void main() {
   else if (texID == 1) {
     oColor = texture(tex1, texcoord).rgb * textAmbLight;
     outColor = vec4(oColor,1);
+  }
+  else if (texID == 2) {  // moon
+      oColor = texture(tex2, texcoord).rgb * vec3(0.6);;
+      outColor = vec4(oColor, 1);
   }
   else {
     outColor = vec4(1,0,0,1);
